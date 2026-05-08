@@ -48,14 +48,14 @@ Sigue estos pasos para poner en marcha el juego:
 1.  **Clona el repositorio:**
     ```bash
     git clone https://github.com/narquileerrado/soul48.git
-    cd spd-ascii-poc
+    cd soul48
     ```
 
 2.  **Compila el proyecto:**
     ```bash
     cargo build --release
     ```
-    *Nota: El ejecutable se generará en `target/release/spd_ascii_poc`.*
+    *Nota: El ejecutable se generará en `target/release/soul48`.*
 
 3.  **Ejecuta el juego:**
     ```bash
