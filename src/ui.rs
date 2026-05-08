@@ -8,7 +8,9 @@ use ratatui::{
     Frame,
 };
 
+/// Renderiza la interfaz principal del juego durante la exploración (GameState::Playing).
 pub fn ui(f: &mut Frame, app: &App) {
+    // Definición de la estructura de paneles (layout)
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(10), Constraint::Length(6)])
@@ -24,6 +26,7 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     let ui_style = Style::default().fg(Color::Cyan);
 
+    // Renderizado procedimental del mapa basado en el Campo de Visión (FOV)
     let map_lines: Vec<Line> = app
         .map
         .iter()
@@ -35,6 +38,7 @@ pub fn ui(f: &mut Frame, app: &App) {
                 .map(|(x, &tile)| {
                     let current_pos = Point::new(x, y);
                     if current_pos == app.hero_pos {
+                        // Representación del Héroe
                         Span::styled(
                             "@",
                             Style::default().fg(if app.hero_hp < 10 {
@@ -44,6 +48,7 @@ pub fn ui(f: &mut Frame, app: &App) {
                             }),
                         )
                     } else if app.visible[y][x] {
+                        // Tiles actualmente visibles por el héroe
                         if let Some(e) = app.entities.iter().find(|e| e.pos == current_pos) {
                             Span::styled(e.glyph.to_string(), Style::default().fg(e.color))
                         } else {
@@ -57,11 +62,13 @@ pub fn ui(f: &mut Frame, app: &App) {
                             Span::styled(tile.to_string(), Style::default().fg(color))
                         }
                     } else if app.explored[y][x] {
+                        // Tiles explorados previamente pero fuera del FOV actual
                         Span::styled(
                             tile.to_string(),
                             Style::default().fg(Color::Rgb(40, 40, 40)),
                         )
                     } else {
+                        // Terreno no descubierto
                         Span::raw(" ")
                     }
                 })
@@ -80,6 +87,7 @@ pub fn ui(f: &mut Frame, app: &App) {
         top_chunks[0],
     );
 
+    // Panel de estadísticas vitales y equipamiento
     let weapon_text = if let Some(w) = &app.equipped_weapon {
         format!("{} ({}-{})", w.0, w.1, w.2)
     } else {
@@ -99,6 +107,7 @@ pub fn ui(f: &mut Frame, app: &App) {
         right_chunks[0],
     );
 
+    // Panel de inventario con gestión de modo descarte
     let inv_lines: Vec<String> = app
         .inventory
         .iter()
@@ -132,6 +141,7 @@ pub fn ui(f: &mut Frame, app: &App) {
         right_chunks[1],
     );
 
+    // Panel de historial de eventos (log) con codificación de colores por tipo
     let log_lines: Vec<Line> = app
         .logs
         .iter()
@@ -156,8 +166,9 @@ pub fn ui(f: &mut Frame, app: &App) {
     );
 }
 
+/// Muestra la pantalla de derrota superpuesta al estado final del mapa.
 pub fn game_over_ui(f: &mut Frame, app: &App) {
-    ui(f, app); // Dibuja la UI normal de fondo
+    ui(f, app);
 
     let area = centered_rect(50, 20, f.size());
     f.render_widget(Clear, area);
@@ -200,14 +211,12 @@ pub fn game_over_ui(f: &mut Frame, app: &App) {
     f.render_widget(paragraph, area);
 }
 
+/// Renderiza el Bestiario, permitiendo consultar lore y atributos de las criaturas.
 pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState) {
     let size = f.size();
     let bestiary = get_bestiary();
     let antique_gold = Color::Rgb(212, 175, 55);
-    let _parchment = Color::Rgb(252, 245, 229);
-    let _ink_blue = Color::Rgb(20, 30, 70);
 
-    // Fondo "pergamino"
     let outer_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(antique_gold))
@@ -226,7 +235,7 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState) {
         .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
         .split(main_layout[0]);
 
-    // Lista de enemigos
+    // Lista de selección de enemigos
     let items: Vec<ListItem> = bestiary
         .iter()
         .map(|e| {
@@ -249,7 +258,7 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState) {
 
     f.render_stateful_widget(list, content_layout[0], list_state);
 
-    // Detalle del enemigo
+    // Panel de detalles: Historia, Atributos y Comportamiento
     let selected_idx = list_state.selected().unwrap_or(0);
     let e = &bestiary[selected_idx];
 
@@ -281,9 +290,6 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState) {
         Line::from(""),
     ];
 
-    // Wrap description lines
-    let _desc_para = Paragraph::new(e.description).wrap(Wrap { trim: true });
-
     details.push(Line::from(e.description));
     details.push(Line::from(""));
     details.push(Line::from(Span::styled(
@@ -304,13 +310,13 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState) {
 
     f.render_widget(detail_paragraph, content_layout[1]);
 
-    // Footer
     let footer = Paragraph::new("[ARRIBA/ABAJO] Navegar  [ESC/Q] Volver")
         .alignment(Alignment::Center)
         .style(Style::default().fg(Color::DarkGray));
     f.render_widget(footer, main_layout[1]);
 }
 
+/// Función de utilidad para calcular un rectángulo centrado en la pantalla.
 fn centered_rect(
     percent_x: u16,
     percent_y: u16,

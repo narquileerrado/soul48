@@ -3,6 +3,7 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::style::Color;
 
+/// Representa una región rectangular en el mapa, utilizada para generar habitaciones.
 struct Rect {
     x1: usize,
     y1: usize,
@@ -11,6 +12,7 @@ struct Rect {
 }
 
 impl Rect {
+    /// Crea un nuevo rectángulo dadas sus coordenadas de origen, ancho y alto.
     fn new(x: usize, y: usize, w: usize, h: usize) -> Self {
         Rect {
             x1: x,
@@ -19,15 +21,19 @@ impl Rect {
             y2: y + h,
         }
     }
+
+    /// Calcula el punto central del rectángulo.
     fn center(&self) -> Point {
         Point::new((self.x1 + self.x2) / 2, (self.y1 + self.y2) / 2)
     }
+
+    /// Determina si este rectángulo se solapa con otro.
     fn intersect(&self, other: &Rect) -> bool {
         self.x1 <= other.x2 && self.x2 >= other.x1 && self.y1 <= other.y2 && self.y2 >= other.y1
     }
 }
 
-// NUEVA ESTRUCTURA DE PLANTILLA
+/// Define las características base para un tipo de enemigo antes de ser instanciado.
 struct EnemyTemplate {
     name: &'static str,
     glyph: char,
@@ -39,6 +45,7 @@ struct EnemyTemplate {
     spawn_weight: i32,
 }
 
+/// Encargado de la generación procedimental del nivel, incluyendo geografía y entidades.
 pub struct MapBuilder {
     pub map: Vec<Vec<char>>,
     pub hero_start: Point,
@@ -46,6 +53,7 @@ pub struct MapBuilder {
 }
 
 impl MapBuilder {
+    /// Construye un nuevo nivel utilizando una semilla aleatoria y ajustando la dificultad según la profundidad.
     pub fn new(seed: u64, depth: u32) -> Self {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
         let map_width = 60;
@@ -55,6 +63,7 @@ impl MapBuilder {
         let mut entities = Vec::new();
         let mut hero_start = Point::new(0, 0);
 
+        // Intento de generación de habitaciones aleatorias
         for _ in 0..12 {
             let w = rng.gen_range(5..=10);
             let h = rng.gen_range(5..=10);
@@ -63,6 +72,7 @@ impl MapBuilder {
             let new_room = Rect::new(x, y, w, h);
 
             if !rooms.iter().any(|r| new_room.intersect(r)) {
+                // Tallar la habitación en el mapa de muros
                 for ry in new_room.y1..=new_room.y2 {
                     for rx in new_room.x1..=new_room.x2 {
                         map[ry][rx] = '.';
@@ -72,6 +82,7 @@ impl MapBuilder {
                 if rooms.is_empty() {
                     hero_start = new_center;
                 } else {
+                    // Conexión con la habitación anterior mediante túneles en L
                     let prev_center = rooms.last().unwrap().center();
                     if rng.gen_bool(0.5) {
                         for cx in std::cmp::min(prev_center.x, new_center.x)
@@ -97,10 +108,12 @@ impl MapBuilder {
                         }
                     }
 
+                    // Probabilidad de aparición de enemigos según profundidad
                     if rng.gen_range(0..100) < (30 + depth * 2).min(65) {
                         entities.push(Self::spawn_random_enemy(&mut rng, new_center, depth));
                     }
 
+                    // Probabilidad de aparición de objetos (pociones)
                     if rng.gen_range(0..100) < 20 {
                         let mut item_pos = new_center;
                         if item_pos.x + 1 < map_width && map[item_pos.y][item_pos.x + 1] == '.' {
@@ -119,6 +132,7 @@ impl MapBuilder {
             }
         }
 
+        // Colocación estratégica de cofres y llaves
         if rooms.len() > 2 {
             let chest_pos = rooms[1].center();
             entities.push(Entity {
@@ -138,6 +152,7 @@ impl MapBuilder {
             });
         }
 
+        // Colocación del punto de salida (escaleras)
         if let Some(last_room) = rooms.last() {
             let stairs_pos = last_room.center();
             map[stairs_pos.y][stairs_pos.x] = '>';
@@ -150,6 +165,7 @@ impl MapBuilder {
         }
     }
 
+    /// Selecciona y configura un enemigo aleatorio basado en pesos de aparición y dificultad.
     fn spawn_random_enemy(rng: &mut ChaCha8Rng, pos: Point, depth: u32) -> Entity {
         let catalog = vec![
             EnemyTemplate {

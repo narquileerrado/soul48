@@ -16,17 +16,22 @@ use crossterm::{
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::{error::Error, io};
 
+/// Punto de entrada principal de la aplicación.
+/// Gestiona el ciclo de vida del terminal, el bucle de eventos y el renderizado.
 fn main() -> Result<(), Box<dyn Error>> {
+    // Configuración inicial del terminal en modo raw
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    // Inicialización del estado de la aplicación
     let mut app = App::new(None, None, None, 1, None);
 
     loop {
         // --- 1. RENDERIZADO ---
+        // Dibuja la interfaz correspondiente según el estado actual del juego
         match app.state {
             GameState::TitleScreen => {
                 terminal.draw(|f| title::ui(f, &mut app.title_menu_state))?;
@@ -42,12 +47,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
 
-        // --- 2. MANEJO DE EVENTOS (NO BLOQUEANTE) ---
+        // --- 2. MANEJO DE EVENTOS (POLLEO NO BLOQUEANTE) ---
         if event::poll(std::time::Duration::from_millis(16))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == event::KeyEventKind::Press {
                     match app.state {
-                        // ================== PANTALLA DE TÍTULO ==================
+                        // Gestión de navegación y selección en el menú principal
                         GameState::TitleScreen => match key.code {
                             KeyCode::Up => {
                                 let i = match app.title_menu_state.selected() {
@@ -93,7 +98,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             _ => {}
                         },
 
-                        // ================== BESTIARIO ==================
+                        // Navegación dentro del bestiario de criaturas
                         GameState::Bestiary => match key.code {
                             KeyCode::Up => {
                                 let i = match app.bestiary_state.selected() {
@@ -127,7 +132,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             _ => {}
                         },
 
-                        // ================== JUEGO (MAZMORRA) ==================
+                        // Lógica principal durante la exploración de la mazmorra
                         GameState::Playing => {
                             if app.show_descend_prompt {
                                 match key.code {
@@ -204,6 +209,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 _ => {}
                             }
 
+                            // Si el jugador realizó una acción, se procesa el turno de los enemigos
                             if action_taken {
                                 if app.drop_mode {
                                     app.drop_mode = false;
@@ -217,7 +223,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                     app.process_enemy_turns();
                                     app.calculate_fov();
 
-                                    // CHEQUEO DE MUERTE
+                                    // Verificación de estado de salud del héroe
                                     if app.hero_hp <= 0 {
                                         app.state = GameState::GameOver;
                                     }
@@ -225,31 +231,28 @@ fn main() -> Result<(), Box<dyn Error>> {
                             }
                         }
 
-                        // ================== PANTALLA DE MUERTE ==================
-                        GameState::GameOver => {
-                            match key.code {
-                                KeyCode::Char('q') | KeyCode::Esc => break,
-                                KeyCode::Char('r') | KeyCode::Char('R') => {
-                                    // Reinicia el juego completo creando una App nueva
-                                    app = App::new(None, None, None, 1, None);
-                                }
-                                _ => {}
+                        // Gestión de la pantalla de fin de juego (muerte)
+                        GameState::GameOver => match key.code {
+                            KeyCode::Char('q') | KeyCode::Esc => break,
+                            KeyCode::Char('r') | KeyCode::Char('R') => {
+                                app = App::new(None, None, None, 1, None);
                             }
-                        }
+                            _ => {}
+                        },
                     }
                 }
             } else if let Event::Mouse(mouse_event) = event::read()? {
+                // Inspección de tiles mediante clic izquierdo
                 if app.state == GameState::Playing {
                     if mouse_event.kind == event::MouseEventKind::Down(event::MouseButton::Left) {
                         app.inspect_tile(mouse_event.column, mouse_event.row);
                     }
                 }
-            } else if let Event::Resize(_, _) = event::read()? {
-                // El redimensionado se maneja automáticamente en el siguiente draw
             }
         }
     }
 
+    // Restauración del estado original del terminal al salir
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),

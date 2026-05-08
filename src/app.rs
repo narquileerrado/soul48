@@ -3,6 +3,7 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::{style::Color, widgets::ListState};
 
+/// Representa el estado actual de la aplicación/juego.
 #[derive(Clone, PartialEq)]
 pub enum GameState {
     TitleScreen,
@@ -11,6 +12,7 @@ pub enum GameState {
     Bestiary,
 }
 
+/// Define el comportamiento actual de una entidad enemiga.
 #[derive(Clone, PartialEq)]
 pub enum EnemyState {
     Asleep,
@@ -18,6 +20,7 @@ pub enum EnemyState {
     Aggressive,
 }
 
+/// Especifica el tipo de inteligencia artificial que rige a un enemigo.
 #[derive(Clone, PartialEq)]
 pub enum EnemyAI {
     Melee,
@@ -26,6 +29,7 @@ pub enum EnemyAI {
     Stationary,
 }
 
+/// Clasificación de las entidades presentes en el mundo del juego.
 #[derive(Clone, PartialEq)]
 pub enum EntityType {
     Mob {
@@ -48,6 +52,7 @@ pub enum EntityType {
     Key,
 }
 
+/// Categorías para los mensajes de registro (log).
 pub enum LogType {
     Info,
     Combat,
@@ -55,11 +60,13 @@ pub enum LogType {
     Warning,
 }
 
+/// Estructura de un mensaje para el historial de eventos.
 pub struct LogMessage {
     pub text: String,
     pub l_type: LogType,
 }
 
+/// Representación de una coordenada bidimensional en el mapa.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Point {
     pub x: usize,
@@ -71,6 +78,7 @@ impl Point {
     }
 }
 
+/// Estructura base para cualquier objeto o criatura interactuable.
 #[derive(Clone)]
 pub struct Entity {
     pub pos: Point,
@@ -80,6 +88,7 @@ pub struct Entity {
     pub e_type: EntityType,
 }
 
+/// Estructura principal que mantiene el estado global de la simulación.
 pub struct App {
     pub hero_pos: Point,
     pub hero_hp: i32,
@@ -95,12 +104,12 @@ pub struct App {
     pub seed: u64,
     pub depth: u32,
 
-    // Flags de mecánicas
+    // Flags de mecánicas de flujo
     pub should_descend: bool,
     pub drop_mode: bool,
     pub show_descend_prompt: bool,
 
-    // Estado del juego
+    // Estado de navegación y UI
     pub state: GameState,
     pub title_menu_state: ListState,
     pub bestiary_state: ListState,
@@ -108,6 +117,7 @@ pub struct App {
 }
 
 impl App {
+    /// Inicializa una nueva instancia de la aplicación, generando el nivel y las entidades.
     pub fn new(
         custom_seed: Option<u64>,
         hp: Option<i32>,
@@ -131,7 +141,6 @@ impl App {
         let mut bestiary_state = ListState::default();
         bestiary_state.select(Some(0));
 
-        // Determinamos el estado inicial. Si bajamos de piso, ya no mostramos el menú principal
         let initial_state = if depth == 1 && hp.is_none() {
             GameState::TitleScreen
         } else {
@@ -166,7 +175,6 @@ impl App {
             rng,
         };
 
-        // Si ya estamos jugando (ej: bajamos al piso 2), renderizamos paredes y visión inmediatamente
         if app.state == GameState::Playing {
             app.smooth_walls();
             app.calculate_fov();
@@ -175,7 +183,7 @@ impl App {
         app
     }
 
-    // Nueva función para manejar todas las interacciones con entidades
+    /// Gestiona la interacción física o lógica con una entidad en el mapa.
     fn interact_with_entity(&mut self, index: usize) -> (bool, bool) {
         let mut entity_clone = self.entities[index].clone();
         let mut move_allowed = true;
@@ -195,7 +203,6 @@ impl App {
                 }
 
                 let mut damage = self.rng.gen_range(min_d..=max_d);
-                // Aplicar defensa del enemigo
                 damage = (damage - *defense).max(1);
 
                 if self.rng.gen_bool(0.2) {
@@ -237,7 +244,6 @@ impl App {
                         self.add_log("> Abres el cofre con la llave.".into(), LogType::Info);
                         let dmg_bonus = self.depth as i32;
 
-                        // Reemplazamos el cofre por un arma
                         self.entities[index] = Entity {
                             pos: entity_clone.pos,
                             glyph: '/',
@@ -291,9 +297,10 @@ impl App {
             self.entities.remove(i);
         }
 
-        (move_allowed, true) // action_taken is always true if we interact
+        (move_allowed, true)
     }
 
+    /// Transiciona el juego al estado activo e inicializa la visión.
     pub fn start_new_game(&mut self) {
         self.smooth_walls();
         self.calculate_fov();
@@ -304,6 +311,7 @@ impl App {
         );
     }
 
+    /// Intenta desplazar al héroe a una nueva posición, gestionando colisiones e interacciones.
     pub fn try_move(&mut self, dx: isize, dy: isize) -> bool {
         let new_pos = Point::new(
             (self.hero_pos.x as isize + dx) as usize,
@@ -321,7 +329,7 @@ impl App {
 
         if tile == '>' {
             self.show_descend_prompt = true;
-            return true; // Es una acción válida que consume un turno
+            return true;
         }
 
         let mut action_taken = false;
@@ -335,12 +343,13 @@ impl App {
 
         if move_allowed {
             self.hero_pos = new_pos;
-            action_taken = true; // El simple hecho de moverse es una acción
+            action_taken = true;
         }
 
         action_taken
     }
 
+    /// Confirma o cancela la intención de descender al siguiente nivel.
     pub fn confirm_descent(&mut self, confirmed: bool) {
         if confirmed {
             self.should_descend = true;
@@ -348,6 +357,7 @@ impl App {
         self.show_descend_prompt = false;
     }
 
+    /// Aplica el efecto de un objeto del inventario o lo equipa.
     pub fn use_item(&mut self, index: usize) -> bool {
         if index >= self.inventory.len() {
             return false;
@@ -402,6 +412,7 @@ impl App {
         false
     }
 
+    /// Descarta un objeto del inventario en la posición actual del héroe.
     pub fn drop_item(&mut self, index: usize) -> bool {
         if index >= self.inventory.len() {
             return false;
@@ -435,6 +446,7 @@ impl App {
         true
     }
 
+    /// Añade un mensaje al historial, manteniendo un tamaño máximo.
     pub fn add_log(&mut self, text: String, l_type: LogType) {
         self.logs.push(LogMessage { text, l_type });
         if self.logs.len() > 5 {
@@ -442,6 +454,7 @@ impl App {
         }
     }
 
+    /// Procesa la lógica de turno para todas las entidades enemigas (IA).
     pub fn process_enemy_turns(&mut self) {
         let hx = self.hero_pos.x as isize;
         let hy = self.hero_pos.y as isize;
@@ -461,7 +474,6 @@ impl App {
 
             let dist = (hx - ex).abs() + (hy - ey).abs();
 
-            // Lógica de Despertar
             if current_state == EnemyState::Asleep && dist < 4 {
                 current_state = EnemyState::Aggressive;
                 messages.push((format!("> {} despierta!", name), LogType::Warning));
@@ -523,6 +535,7 @@ impl App {
         }
     }
 
+    /// Mueve a un mob validando colisiones con el mapa y otras entidades.
     fn move_mob(&mut self, idx: usize, dx: isize, dy: isize) {
         let new_pos = Point::new(
             (self.entities[idx].pos.x as isize + dx) as usize,
@@ -546,6 +559,7 @@ impl App {
         }
     }
 
+    /// Calcula el Campo de Visión (FOV) del héroe basado en un radio definido.
     pub fn calculate_fov(&mut self) {
         let hx = self.hero_pos.x as isize;
         let hy = self.hero_pos.y as isize;
@@ -569,6 +583,7 @@ impl App {
         }
     }
 
+    /// Comprueba si existe línea de visión (LOS) entre dos puntos (Algoritmo de Bresenham).
     pub fn has_los(&self, p0: (isize, isize), p1: (isize, isize)) -> bool {
         let (mut x, mut y) = p0;
         let (x1, y1) = p1;
@@ -598,6 +613,7 @@ impl App {
         }
     }
 
+    /// Muestra información detallada sobre un tile específico inspeccionado por el usuario.
     pub fn inspect_tile(&mut self, tx: u16, ty: u16) {
         if tx == 0 || ty == 0 {
             return;
@@ -618,6 +634,7 @@ impl App {
         }
     }
 
+    /// Transforma los muros básicos en glifos de dibujo de caja para una mejor estética.
     pub fn smooth_walls(&mut self) {
         let mut new_map = self.map.clone();
         let height = self.map.len();

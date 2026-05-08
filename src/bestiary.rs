@@ -1,5 +1,6 @@
 use ratatui::style::Color;
 
+/// Define la estructura de información para una entrada en el compendio de criaturas.
 pub struct BestiaryEntry {
     pub name: &'static str,
     pub scientific_name: &'static str,
@@ -13,6 +14,7 @@ pub struct BestiaryEntry {
     pub behavior: &'static str,
 }
 
+/// Retorna la colección completa de criaturas documentadas en el juego.
 pub fn get_bestiary() -> Vec<BestiaryEntry> {
     vec![
         BestiaryEntry {
