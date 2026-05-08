@@ -29,13 +29,25 @@
 - **Interfaz Gráfica en Terminal:** Construida con `ratatui`, ofrece una experiencia de juego clara y organizada.
 - **Soporte para Ratón:** Haz clic en una casilla visible para inspeccionarla y obtener información.
 
+## 📋 Requisitos
+
+Para compilar y ejecutar este proyecto, asegúrate de tener instalado lo siguiente:
+
+-   **Rust:** Se recomienda la versión estable (1.70 o superior). Puedes instalarlo desde [rust-lang.org](https://www.rust-lang.org/tools/install).
+-   **Cargo:** El gestor de paquetes de Rust (incluido con la instalación de Rust).
+-   **Herramientas de compilación:**
+    -   **Linux:** `build-essential` (o equivalente como `base-devel`).
+    -   **macOS:** Xcode Command Line Tools (`xcode-select --install`).
+    -   **Windows:** [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) con la carga de trabajo de C++.
+-   **Git:** Para clonar el repositorio.
+
 ## 🛠️ Cómo Compilar y Ejecutar
 
-Asegúrate de tener [Rust](https://www.rust-lang.org/tools/install) instalado en tu sistema.
+Sigue estos pasos para poner en marcha el juego:
 
 1.  **Clona el repositorio:**
     ```bash
-    git clone https://github.com/Leandro-Cardozo/spd-ascii-poc.git
+    git clone https://github.com/narquileerrado/soul48.git
     cd spd-ascii-poc
     ```
 
@@ -43,11 +55,15 @@ Asegúrate de tener [Rust](https://www.rust-lang.org/tools/install) instalado en
     ```bash
     cargo build --release
     ```
+    *Nota: El ejecutable se generará en `target/release/spd_ascii_poc`.*
 
 3.  **Ejecuta el juego:**
     ```bash
-    cargo run
+    cargo run --release
     ```
+    *También puedes ejecutar el binario directamente una vez compilado.*
+
+- **Bestiario:** Consulta información detallada y el trasfondo narrativo de las criaturas que encuentres en el Compendio.
 
 ## 🎮 Controles
 
@@ -58,14 +74,18 @@ Asegúrate de tener [Rust](https://www.rust-lang.org/tools/install) instalado en
 
 ### Durante el Juego
 - **Flechas de Dirección:** Mover al personaje y atacar enemigos.
-- **Q / Esc:** Salir del juego.
+- **Q / Esc:** Salir al menú principal (desde el Bestiario) o cerrar el juego.
 - **D:** Activar/desactivar el **modo Descartar**.
 - **1-9:**
-    - **Modo Normal:** Usar el objeto correspondiente del inventario.
+    - **Modo Normal:** Usar o equipar el objeto correspondiente del inventario.
     - **Modo Descartar:** Dejar el objeto en el suelo.
-- **S / Enter:** Confirmar para descender por las escaleras.
+- **S / Enter:** Confirmar para descender por las escaleras (cuando se te pregunte).
 - **N / Esc:** Cancelar el descenso.
-- **Clic Izquierdo del Ratón:** Inspeccionar una casilla visible en el mapa.
+- **Clic Izquierdo del Ratón:** Inspeccionar una casilla visible en el mapa para obtener información en el historial.
+
+### Bestiario
+- **Flechas Arriba/Abajo:** Seleccionar una criatura.
+- **Q / Esc:** Volver al menú principal.
 
 ### Pantalla de Game Over
 - **R:** Reiniciar la partida.
@@ -75,10 +95,12 @@ Asegúrate de tener [Rust](https://www.rust-lang.org/tools/install) instalado en
 
 El código fuente está organizado en los siguientes módulos:
 
--   `main.rs`: Contiene el bucle principal del juego, gestiona la inicialización de la terminal y el manejo de eventos (teclado, ratón, redimensionamiento).
--   `app.rs`: Define las estructuras de datos principales (`App`, `Entity`, `GameState`), la lógica de generación del mapa y las mecánicas centrales del juego (movimiento, combate, FOV, uso de objetos).
--   `ui.rs`: Se encarga de renderizar la interfaz de juego principal, incluyendo el mapa, las estadísticas del jugador, el inventario y el historial de mensajes. También dibuja la pantalla de "Game Over".
--   `title.rs`: Renderiza la pantalla de título y el menú principal del juego.
+-   `main.rs`: Punto de entrada de la aplicación. Gestiona el bucle principal, la inicialización de la terminal (Crossterm) y el despacho de eventos de teclado y ratón.
+-   `app.rs`: Define el núcleo de la lógica del juego, incluyendo el estado global (`App`), sistemas de combate, movimiento, inventario y gestión de entidades.
+-   `map_builder.rs`: Responsable de la generación procedimental de los niveles. Implementa el algoritmo de excavación de habitaciones y túneles, así como la colocación aleatoria de enemigos y objetos.
+-   `bestiary.rs`: Contiene las definiciones y descripciones narrativas de todas las criaturas del juego, integrando datos mecánicos con el trasfondo del mundo.
+-   `ui.rs`: Gestiona el renderizado visual utilizando `ratatui`. Dibuja el mapa, la interfaz lateral (HUD), los menús de inventario y la pantalla de fin de juego.
+-   `title.rs`: Se encarga exclusivamente de la lógica y presentación de la pantalla de título y el menú principal.
 
 ## 📚 Dependencias
 
