@@ -105,7 +105,6 @@ pub struct App {
     pub depth: u32,
 
     // Flags de mecánicas de flujo
-    pub should_descend: bool,
     pub drop_mode: bool,
     pub show_descend_prompt: bool,
 
@@ -165,7 +164,6 @@ impl App {
             seed,
             depth,
 
-            should_descend: false,
             drop_mode: false,
             show_descend_prompt: false,
 
@@ -311,12 +309,22 @@ impl App {
         );
     }
 
+    /// Suma un delta a una coordenada devolviendo None si el resultado sería negativo.
+    fn offset_point(pos: Point, dx: isize, dy: isize) -> Option<Point> {
+        let nx = pos.x as isize + dx;
+        let ny = pos.y as isize + dy;
+        if nx < 0 || ny < 0 {
+            return None;
+        }
+        Some(Point::new(nx as usize, ny as usize))
+    }
+
     /// Intenta desplazar al héroe a una nueva posición, gestionando colisiones e interacciones.
     pub fn try_move(&mut self, dx: isize, dy: isize) -> bool {
-        let new_pos = Point::new(
-            (self.hero_pos.x as isize + dx) as usize,
-            (self.hero_pos.y as isize + dy) as usize,
-        );
+        let new_pos = match Self::offset_point(self.hero_pos, dx, dy) {
+            Some(p) => p,
+            None => return false,
+        };
 
         if new_pos.y >= self.map.len() || new_pos.x >= self.map[0].len() {
             return false;
@@ -349,11 +357,8 @@ impl App {
         action_taken
     }
 
-    /// Confirma o cancela la intención de descender al siguiente nivel.
-    pub fn confirm_descent(&mut self, confirmed: bool) {
-        if confirmed {
-            self.should_descend = true;
-        }
+    /// Cierra el prompt de descenso.
+    pub fn confirm_descent(&mut self) {
         self.show_descend_prompt = false;
     }
 
@@ -537,10 +542,10 @@ impl App {
 
     /// Mueve a un mob validando colisiones con el mapa y otras entidades.
     fn move_mob(&mut self, idx: usize, dx: isize, dy: isize) {
-        let new_pos = Point::new(
-            (self.entities[idx].pos.x as isize + dx) as usize,
-            (self.entities[idx].pos.y as isize + dy) as usize,
-        );
+        let new_pos = match Self::offset_point(self.entities[idx].pos, dx, dy) {
+            Some(p) => p,
+            None => return,
+        };
 
         if new_pos.y < self.map.len()
             && new_pos.x < self.map[0].len()

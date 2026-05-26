@@ -49,8 +49,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // --- 2. MANEJO DE EVENTOS (POLLEO NO BLOQUEANTE) ---
         if event::poll(std::time::Duration::from_millis(16))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == event::KeyEventKind::Press {
+            match event::read()? {
+            Event::Key(key) if key.kind == event::KeyEventKind::Press => {
                     match app.state {
                         // Gestión de navegación y selección en el menú principal
                         GameState::TitleScreen => match key.code {
@@ -137,7 +137,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             if app.show_descend_prompt {
                                 match key.code {
                                     KeyCode::Char('s') | KeyCode::Char('S') | KeyCode::Enter => {
-                                        app.confirm_descent(true);
+                                        app.confirm_descent();
                                         let next_depth = app.depth + 1;
                                         let current_hp = Some(app.hero_hp);
                                         let current_inv = Some(app.inventory.clone());
@@ -155,7 +155,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                         );
                                     }
                                     KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
-                                        app.confirm_descent(false);
+                                        app.confirm_descent();
                                         app.add_log(
                                             "> Decides quedarte en este nivel.".into(),
                                             LogType::Info,
@@ -219,7 +219,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                     );
                                 }
 
-                                if !app.show_descend_prompt && !app.should_descend {
+                                if !app.show_descend_prompt {
                                     app.process_enemy_turns();
                                     app.calculate_fov();
 
@@ -241,13 +241,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                         },
                     }
                 }
-            } else if let Event::Mouse(mouse_event) = event::read()? {
+            Event::Mouse(mouse_event) => {
                 // Inspección de tiles mediante clic izquierdo
                 if app.state == GameState::Playing {
                     if mouse_event.kind == event::MouseEventKind::Down(event::MouseButton::Left) {
                         app.inspect_tile(mouse_event.column, mouse_event.row);
                     }
                 }
+            }
+            _ => {}
             }
         }
     }
