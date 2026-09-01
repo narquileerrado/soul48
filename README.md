@@ -19,15 +19,19 @@
 
 ## 🚀 Características
 
-- **Generación Procedural de Mazmorras:** Cada nivel es único, con habitaciones y pasillos generados aleatoriamente.
-- **Sistema de Visión (FOV):** El mapa se revela a medida que exploras, manteniendo las áreas visitadas en un tono oscuro.
-- **Combate por Turnos:** Ataca a los enemigos moviéndote hacia ellos. El daño se calcula basado en tu arma equipada.
-- **Enemigos con IA Simple:** Los enemigos pueden estar dormidos, deambular o volverse agresivos cuando te ven.
+- **Generación Procedural de Mazmorras:** Cada nivel es único, con habitaciones, túneles y entidades distribuidas procedimentalmente.
+- **Sistema de Visión (FOV):** El mapa se revela a medida que exploras, manteniendo las áreas visitadas en un tono tenue.
+- **Entidades Narrativas Interactivas:**
+  - **Paredes Parlantes (`W`):** Murallas antiguas que susurran fragmentos de lore, advertencias y secretos.
+  - **Altáres de Ecos (`A`):** Estructuras místicas donde puedes ofrecer un pacto de sangre (5 HP) para revelar la totalidad del mapa del nivel.
+- **Sistema de Guardado y Carga de Partida:** Persistencia completa del estado del juego (`savegame.json`). Tu progreso se guarda automáticamente al salir y puedes reanudarlo en cualquier momento desde el menú principal (*RECOGER FRAGMENTOS*).
+- **Combate por Turnos:** Ataca a los enemigos moviéndote hacia ellos. El daño se calcula según tu arma equipada y defensas.
+- **Enemigos con IA Adaptativa:** Mobs dormidos, errantes, agresivos, cobardes y estáticos (mímicos).
 - **Sistema de Inventario:** Recoge pociones, armas, llaves y otros objetos. Úsalos o descártalos según necesites.
-- **Entidades Interactivas:** Encuentra cofres cerrados que requieren llaves y escaleras para descender al siguiente nivel.
-- **Persistencia entre Niveles:** Tu salud, inventario y equipo se conservan al bajar de piso.
+- **Entidades Interactivas:** Cofres cerrados que requieren llaves y escaleras para descender de piso.
+- **Persistencia entre Niveles:** Tu salud, equipo e inventario se conservan al descender de piso.
 - **Interfaz Gráfica en Terminal:** Construida con `ratatui`, ofrece una experiencia de juego clara y organizada.
-- **Soporte para Ratón:** Haz clic en una casilla visible para inspeccionarla y obtener información.
+- **Soporte para Ratón:** Clic izquierdo en casillas visibles para inspeccionar entidades e información ambiental.
 
 ## 📋 Requisitos
 

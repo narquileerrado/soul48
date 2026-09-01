@@ -51,6 +51,13 @@ pub enum EntityType {
         locked: bool,
     },
     Key,
+    TalkingWall {
+        message: String,
+        whispered: bool,
+    },
+    EchoAltar {
+        used: bool,
+    },
 }
 
 /// Categorías para los mensajes de registro (log).
@@ -278,6 +285,41 @@ impl App {
                             LogType::Warning,
                         );
                     }
+                }
+            }
+            EntityType::TalkingWall { message, whispered } => {
+                move_allowed = false;
+                if !*whispered {
+                    self.add_log(format!("> SUSURRO DE LA PARED: \"{}\"", message), LogType::Info);
+                    *whispered = true;
+                    self.entities[index] = entity_clone;
+                } else {
+                    self.add_log("> La pared guarda silencio ahora.".into(), LogType::Info);
+                }
+            }
+            EntityType::EchoAltar { used } => {
+                move_allowed = false;
+                if !*used {
+                    if self.hero_hp > 5 {
+                        self.hero_hp -= 5;
+                        *used = true;
+                        self.entities[index] = entity_clone;
+                        self.add_log("> PACTO DE SANGRE: Ofreces 5 HP al Altar de Ecos.".into(), LogType::Warning);
+                        self.add_log("> EL PISO SE REVELA ANTE TI.".into(), LogType::Info);
+
+                        // Revela todo el mapa explorado
+                        let map_height = self.map.len();
+                        let map_width = self.map[0].len();
+                        for y in 0..map_height {
+                            for x in 0..map_width {
+                                self.explored[y][x] = true;
+                            }
+                        }
+                    } else {
+                        self.add_log("> Tu alma está demasiado débil para ofrecer sangre.".into(), LogType::Warning);
+                    }
+                } else {
+                    self.add_log("> El Altar de Ecos ha consumido su tributo.".into(), LogType::Info);
                 }
             }
             EntityType::Item | EntityType::Key | EntityType::Weapon { .. } => {
@@ -853,5 +895,50 @@ mod tests {
         assert!(app.inventory.is_empty());
         assert_eq!(app.entities.len(), initial_entities_count + 1);
         assert_eq!(app.entities.last().unwrap().pos, app.hero_pos);
+    }
+
+    #[test]
+    fn test_talking_wall_interaction() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+        let wall_pos = Point::new(app.hero_pos.x + 1, app.hero_pos.y);
+        app.map[wall_pos.y][wall_pos.x] = '.';
+        app.entities.push(Entity {
+            pos: wall_pos,
+            glyph: 'W',
+            color: Color::Magenta,
+            name: "Pared Parlante".to_string(),
+            e_type: EntityType::TalkingWall {
+                message: "Un secreto te aguarda.".to_string(),
+                whispered: false,
+            },
+        });
+
+        // Hero interacts with talking wall by trying to move into it
+        let moved = app.try_move(1, 0);
+        assert!(moved);
+        assert_ne!(app.hero_pos, wall_pos); // Cannot step into wall
+        assert!(app.logs.iter().any(|log| log.text.contains("Un secreto te aguarda.")));
+    }
+
+    #[test]
+    fn test_echo_altar_interaction() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+        let altar_pos = Point::new(app.hero_pos.x + 1, app.hero_pos.y);
+        app.map[altar_pos.y][altar_pos.x] = '.';
+        app.entities.push(Entity {
+            pos: altar_pos,
+            glyph: 'A',
+            color: Color::Red,
+            name: "Altar de Ecos".to_string(),
+            e_type: EntityType::EchoAltar { used: false },
+        });
+
+        let initial_hp = app.hero_hp;
+        let moved = app.try_move(1, 0);
+        assert!(moved);
+        assert_eq!(app.hero_hp, initial_hp - 5); // 5 HP traded
+        assert!(app.explored[0][0]); // Map revealed
     }
 }
