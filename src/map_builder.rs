@@ -152,6 +152,42 @@ impl MapBuilder {
             });
         }
 
+        // Colocación de Pared Parlante
+        if rooms.len() > 3 {
+            let wall_room = &rooms[3];
+            let wall_pos = Point::new(wall_room.x1, wall_room.y1);
+            let whispers = [
+                "Recuerda... tu voz fue lo primero que te robaron.",
+                "En el piso 48, el Archidemonio aguarda tu ascenso.",
+                "Los cofres dorados a veces respiran cuando no los miras.",
+                "Ofrecer tu sangre al Altar de Ecos revelará la verdad oculta.",
+            ];
+            let msg = whispers[rng.gen_range(0..whispers.len())].to_string();
+
+            entities.push(Entity {
+                pos: wall_pos,
+                glyph: 'W',
+                color: Color::Rgb(180, 140, 200),
+                name: "Pared de los Lamentos".into(),
+                e_type: EntityType::TalkingWall {
+                    message: msg,
+                    whispered: false,
+                },
+            });
+        }
+
+        // Colocación de Altar de Ecos
+        if rooms.len() > 4 {
+            let altar_pos = rooms[4].center();
+            entities.push(Entity {
+                pos: altar_pos,
+                glyph: 'A',
+                color: Color::Rgb(255, 100, 100),
+                name: "Altar de Ecos".into(),
+                e_type: EntityType::EchoAltar { used: false },
+            });
+        }
+
         // Colocación del punto de salida (escaleras)
         if let Some(last_room) = rooms.last() {
             let stairs_pos = last_room.center();

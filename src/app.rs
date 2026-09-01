@@ -2,9 +2,10 @@ use crate::map_builder;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::{style::Color, widgets::ListState};
+use serde::{Deserialize, Serialize};
 
 /// Representa el estado actual de la aplicación/juego.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum GameState {
     TitleScreen,
     Playing,
@@ -13,7 +14,7 @@ pub enum GameState {
 }
 
 /// Define el comportamiento actual de una entidad enemiga.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum EnemyState {
     Asleep,
     Wandering,
@@ -21,7 +22,7 @@ pub enum EnemyState {
 }
 
 /// Especifica el tipo de inteligencia artificial que rige a un enemigo.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum EnemyAI {
     Melee,
     Wandering,
@@ -30,7 +31,7 @@ pub enum EnemyAI {
 }
 
 /// Clasificación de las entidades presentes en el mundo del juego.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum EntityType {
     Mob {
         hp: i32,
@@ -50,9 +51,17 @@ pub enum EntityType {
         locked: bool,
     },
     Key,
+    TalkingWall {
+        message: String,
+        whispered: bool,
+    },
+    EchoAltar {
+        used: bool,
+    },
 }
 
 /// Categorías para los mensajes de registro (log).
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum LogType {
     Info,
     Combat,
@@ -61,13 +70,14 @@ pub enum LogType {
 }
 
 /// Estructura de un mensaje para el historial de eventos.
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LogMessage {
     pub text: String,
     pub l_type: LogType,
 }
 
 /// Representación de una coordenada bidimensional en el mapa.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Point {
     pub x: usize,
     pub y: usize,
@@ -79,13 +89,30 @@ impl Point {
 }
 
 /// Estructura base para cualquier objeto o criatura interactuable.
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Entity {
     pub pos: Point,
     pub glyph: char,
     pub color: Color,
     pub name: String,
     pub e_type: EntityType,
+}
+
+/// Estructura serializable para la persistencia del juego en disco.
+#[derive(Serialize, Deserialize)]
+pub struct SaveData {
+    pub hero_pos: Point,
+    pub hero_hp: i32,
+    pub hero_max_hp: i32,
+    pub equipped_weapon: Option<(String, i32, i32)>,
+    pub logs: Vec<LogMessage>,
+    pub map: Vec<Vec<char>>,
+    pub visible: Vec<Vec<bool>>,
+    pub explored: Vec<Vec<bool>>,
+    pub entities: Vec<Entity>,
+    pub inventory: Vec<(Entity, usize)>,
+    pub seed: u64,
+    pub depth: u32,
 }
 
 /// Estructura principal que mantiene el estado global de la simulación.
@@ -258,6 +285,41 @@ impl App {
                             LogType::Warning,
                         );
                     }
+                }
+            }
+            EntityType::TalkingWall { message, whispered } => {
+                move_allowed = false;
+                if !*whispered {
+                    self.add_log(format!("> SUSURRO DE LA PARED: \"{}\"", message), LogType::Info);
+                    *whispered = true;
+                    self.entities[index] = entity_clone;
+                } else {
+                    self.add_log("> La pared guarda silencio ahora.".into(), LogType::Info);
+                }
+            }
+            EntityType::EchoAltar { used } => {
+                move_allowed = false;
+                if !*used {
+                    if self.hero_hp > 5 {
+                        self.hero_hp -= 5;
+                        *used = true;
+                        self.entities[index] = entity_clone;
+                        self.add_log("> PACTO DE SANGRE: Ofreces 5 HP al Altar de Ecos.".into(), LogType::Warning);
+                        self.add_log("> EL PISO SE REVELA ANTE TI.".into(), LogType::Info);
+
+                        // Revela todo el mapa explorado
+                        let map_height = self.map.len();
+                        let map_width = self.map[0].len();
+                        for y in 0..map_height {
+                            for x in 0..map_width {
+                                self.explored[y][x] = true;
+                            }
+                        }
+                    } else {
+                        self.add_log("> Tu alma está demasiado débil para ofrecer sangre.".into(), LogType::Warning);
+                    }
+                } else {
+                    self.add_log("> El Altar de Ecos ha consumido su tributo.".into(), LogType::Info);
                 }
             }
             EntityType::Item | EntityType::Key | EntityType::Weapon { .. } => {
@@ -577,11 +639,11 @@ impl App {
             for x in (hx - self.fov_radius)..=(hx + self.fov_radius) {
                 if x >= 0 && x < self.map[0].len() as isize && y >= 0 && y < self.map.len() as isize
                 {
-                    if (x - hx).pow(2) + (y - hy).pow(2) <= self.fov_radius.pow(2) {
-                        if self.has_los((hx, hy), (x, y)) {
-                            self.visible[y as usize][x as usize] = true;
-                            self.explored[y as usize][x as usize] = true;
-                        }
+                    if (x - hx).pow(2) + (y - hy).pow(2) <= self.fov_radius.pow(2)
+                        && self.has_los((hx, hy), (x, y))
+                    {
+                        self.visible[y as usize][x as usize] = true;
+                        self.explored[y as usize][x as usize] = true;
                     }
                 }
             }
@@ -639,6 +701,69 @@ impl App {
         }
     }
 
+    /// Guarda el estado actual de la partida en el archivo especificado.
+    pub fn save_to_file(&self, filepath: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let save_data = SaveData {
+            hero_pos: self.hero_pos,
+            hero_hp: self.hero_hp,
+            hero_max_hp: self.hero_max_hp,
+            equipped_weapon: self.equipped_weapon.clone(),
+            logs: self.logs.clone(),
+            map: self.map.clone(),
+            visible: self.visible.clone(),
+            explored: self.explored.clone(),
+            entities: self.entities.clone(),
+            inventory: self.inventory.clone(),
+            seed: self.seed,
+            depth: self.depth,
+        };
+
+        let json = serde_json::to_string_pretty(&save_data)?;
+        std::fs::write(filepath, json)?;
+        Ok(())
+    }
+
+    /// Carga el estado guardado desde el archivo especificado.
+    pub fn load_from_file(filepath: &str) -> Result<App, Box<dyn std::error::Error>> {
+        let content = std::fs::read_to_string(filepath)?;
+        let save_data: SaveData = serde_json::from_str(&content)?;
+
+        let rng = ChaCha8Rng::seed_from_u64(save_data.seed);
+
+        let mut title_menu_state = ListState::default();
+        title_menu_state.select(Some(0));
+
+        let mut bestiary_state = ListState::default();
+        bestiary_state.select(Some(0));
+
+        let mut app = App {
+            hero_pos: save_data.hero_pos,
+            hero_hp: save_data.hero_hp,
+            hero_max_hp: save_data.hero_max_hp,
+            equipped_weapon: save_data.equipped_weapon,
+            logs: save_data.logs,
+            map: save_data.map,
+            visible: save_data.visible,
+            explored: save_data.explored,
+            fov_radius: 6,
+            entities: save_data.entities,
+            inventory: save_data.inventory,
+            seed: save_data.seed,
+            depth: save_data.depth,
+
+            drop_mode: false,
+            show_descend_prompt: false,
+
+            state: GameState::Playing,
+            title_menu_state,
+            bestiary_state,
+            rng,
+        };
+
+        app.add_log("> Partida cargada exitosamente.".into(), LogType::Info);
+        Ok(app)
+    }
+
     /// Transforma los muros básicos en glifos de dibujo de caja para una mejor estética.
     pub fn smooth_walls(&mut self) {
         let mut new_map = self.map.clone();
@@ -679,5 +804,141 @@ impl App {
             }
         }
         self.map = new_map;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_app_initialization() {
+        let app = App::new(Some(12345), None, None, 1, None);
+        assert_eq!(app.seed, 12345);
+        assert_eq!(app.depth, 1);
+        assert_eq!(app.hero_hp, 20);
+        assert_eq!(app.state, GameState::TitleScreen);
+    }
+
+    #[test]
+    fn test_start_new_game() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+        assert_eq!(app.state, GameState::Playing);
+        assert!(app.visible[app.hero_pos.y][app.hero_pos.x]);
+    }
+
+    #[test]
+    fn test_try_move_invalid() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+        // Trying to move out of bounds (negative offset when at 0,0 if hero was at 0,0) or against a wall
+        // Set hero position surrounded by walls
+        app.hero_pos = Point::new(0, 0);
+        app.map[0][0] = '.';
+        app.map[0][1] = '#';
+        app.map[1][0] = '#';
+
+        assert!(!app.try_move(-1, 0)); // Out of bounds negative
+        assert!(!app.try_move(1, 0));  // Hit wall '#'
+    }
+
+    #[test]
+    fn test_save_and_load_file() {
+        let test_file = "test_savegame.json";
+        let mut app = App::new(Some(54321), None, None, 1, None);
+        app.start_new_game();
+        app.hero_hp = 12;
+
+        app.save_to_file(test_file).expect("Failed to save game");
+
+        let loaded_app = App::load_from_file(test_file).expect("Failed to load game");
+        assert_eq!(loaded_app.seed, 54321);
+        assert_eq!(loaded_app.hero_hp, 12);
+        assert_eq!(loaded_app.state, GameState::Playing);
+
+        let _ = std::fs::remove_file(test_file);
+    }
+
+    #[test]
+    fn test_use_item_healing_potion() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.hero_hp = 5;
+        let potion = Entity {
+            pos: Point::new(0, 0),
+            glyph: '!',
+            color: Color::Magenta,
+            name: "Poción de Curación".to_string(),
+            e_type: EntityType::Item,
+        };
+        app.inventory.push((potion, 1));
+
+        assert!(app.use_item(0));
+        assert_eq!(app.hero_hp, 20); // Healed by 15 up to max 20
+        assert!(app.inventory.is_empty());
+    }
+
+    #[test]
+    fn test_drop_item() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        let initial_entities_count = app.entities.len();
+        let potion = Entity {
+            pos: Point::new(0, 0),
+            glyph: '!',
+            color: Color::Magenta,
+            name: "Poción de Curación".to_string(),
+            e_type: EntityType::Item,
+        };
+        app.inventory.push((potion, 1));
+
+        assert!(app.drop_item(0));
+        assert!(app.inventory.is_empty());
+        assert_eq!(app.entities.len(), initial_entities_count + 1);
+        assert_eq!(app.entities.last().unwrap().pos, app.hero_pos);
+    }
+
+    #[test]
+    fn test_talking_wall_interaction() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+        let wall_pos = Point::new(app.hero_pos.x + 1, app.hero_pos.y);
+        app.map[wall_pos.y][wall_pos.x] = '.';
+        app.entities.push(Entity {
+            pos: wall_pos,
+            glyph: 'W',
+            color: Color::Magenta,
+            name: "Pared Parlante".to_string(),
+            e_type: EntityType::TalkingWall {
+                message: "Un secreto te aguarda.".to_string(),
+                whispered: false,
+            },
+        });
+
+        // Hero interacts with talking wall by trying to move into it
+        let moved = app.try_move(1, 0);
+        assert!(moved);
+        assert_ne!(app.hero_pos, wall_pos); // Cannot step into wall
+        assert!(app.logs.iter().any(|log| log.text.contains("Un secreto te aguarda.")));
+    }
+
+    #[test]
+    fn test_echo_altar_interaction() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+        let altar_pos = Point::new(app.hero_pos.x + 1, app.hero_pos.y);
+        app.map[altar_pos.y][altar_pos.x] = '.';
+        app.entities.push(Entity {
+            pos: altar_pos,
+            glyph: 'A',
+            color: Color::Red,
+            name: "Altar de Ecos".to_string(),
+            e_type: EntityType::EchoAltar { used: false },
+        });
+
+        let initial_hp = app.hero_hp;
+        let moved = app.try_move(1, 0);
+        assert!(moved);
+        assert_eq!(app.hero_hp, initial_hp - 5); // 5 HP traded
+        assert!(app.explored[0][0]); // Map revealed
     }
 }
