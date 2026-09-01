@@ -4,7 +4,7 @@ use rand_chacha::ChaCha8Rng;
 use ratatui::{style::Color, widgets::ListState};
 
 /// Representa el estado actual de la aplicación/juego.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum GameState {
     TitleScreen,
     Playing,
@@ -577,11 +577,11 @@ impl App {
             for x in (hx - self.fov_radius)..=(hx + self.fov_radius) {
                 if x >= 0 && x < self.map[0].len() as isize && y >= 0 && y < self.map.len() as isize
                 {
-                    if (x - hx).pow(2) + (y - hy).pow(2) <= self.fov_radius.pow(2) {
-                        if self.has_los((hx, hy), (x, y)) {
-                            self.visible[y as usize][x as usize] = true;
-                            self.explored[y as usize][x as usize] = true;
-                        }
+                    if (x - hx).pow(2) + (y - hy).pow(2) <= self.fov_radius.pow(2)
+                        && self.has_los((hx, hy), (x, y))
+                    {
+                        self.visible[y as usize][x as usize] = true;
+                        self.explored[y as usize][x as usize] = true;
                     }
                 }
             }
@@ -679,5 +679,42 @@ impl App {
             }
         }
         self.map = new_map;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_app_initialization() {
+        let app = App::new(Some(12345), None, None, 1, None);
+        assert_eq!(app.seed, 12345);
+        assert_eq!(app.depth, 1);
+        assert_eq!(app.hero_hp, 20);
+        assert_eq!(app.state, GameState::TitleScreen);
+    }
+
+    #[test]
+    fn test_start_new_game() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+        assert_eq!(app.state, GameState::Playing);
+        assert!(app.visible[app.hero_pos.y][app.hero_pos.x]);
+    }
+
+    #[test]
+    fn test_try_move_invalid() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+        // Trying to move out of bounds (negative offset when at 0,0 if hero was at 0,0) or against a wall
+        // Set hero position surrounded by walls
+        app.hero_pos = Point::new(0, 0);
+        app.map[0][0] = '.';
+        app.map[0][1] = '#';
+        app.map[1][0] = '#';
+
+        assert!(!app.try_move(-1, 0)); // Out of bounds negative
+        assert!(!app.try_move(1, 0));  // Hit wall '#'
     }
 }
