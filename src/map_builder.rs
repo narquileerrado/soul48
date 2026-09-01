@@ -1,4 +1,4 @@
-use crate::app::{EnemyAI, EnemyState, Entity, EntityType, Point};
+use crate::app::{EnemyAI, EnemyState, Entity, EntityType, Point, ScrollType};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::style::Color;
@@ -125,6 +125,29 @@ impl MapBuilder {
                             color: Color::Magenta,
                             name: "Poción de Curación".to_string(),
                             e_type: EntityType::Item,
+                            status_effects: Vec::new(),
+                        });
+                    }
+
+                    // Probabilidad de aparición de pergaminos mágicos
+                    if rng.gen_range(0..100) < 15 {
+                        let mut scroll_pos = new_center;
+                        if scroll_pos.y + 1 < map_height && map[scroll_pos.y + 1][scroll_pos.x] == '.' {
+                            scroll_pos.y += 1;
+                        }
+                        let (s_type, s_name) = match rng.gen_range(0..4) {
+                            0 => (ScrollType::Lightning, "Pergamino de Rayo"),
+                            1 => (ScrollType::Fireball, "Pergamino de Bola de Fuego"),
+                            2 => (ScrollType::Teleport, "Pergamino de Teletransporte"),
+                            _ => (ScrollType::Invisibility, "Pergamino de Invisibilidad"),
+                        };
+                        entities.push(Entity {
+                            pos: scroll_pos,
+                            glyph: '?',
+                            color: Color::LightCyan,
+                            name: s_name.to_string(),
+                            e_type: EntityType::Scroll { scroll_type: s_type },
+                            status_effects: Vec::new(),
                         });
                     }
                 }
@@ -141,6 +164,7 @@ impl MapBuilder {
                 color: Color::Yellow,
                 name: "Cofre de Madera".into(),
                 e_type: EntityType::Chest { locked: true },
+                status_effects: Vec::new(),
             });
             let key_pos = rooms[2].center();
             entities.push(Entity {
@@ -149,6 +173,7 @@ impl MapBuilder {
                 color: Color::Rgb(200, 200, 0),
                 name: "Llave de Hierro".into(),
                 e_type: EntityType::Key,
+                status_effects: Vec::new(),
             });
         }
 
@@ -173,6 +198,7 @@ impl MapBuilder {
                     message: msg,
                     whispered: false,
                 },
+                status_effects: Vec::new(),
             });
         }
 
@@ -185,6 +211,7 @@ impl MapBuilder {
                 color: Color::Rgb(255, 100, 100),
                 name: "Altar de Ecos".into(),
                 e_type: EntityType::EchoAltar { used: false },
+                status_effects: Vec::new(),
             });
         }
 
@@ -289,6 +316,7 @@ impl MapBuilder {
                 defense: selected.defense + (difficulty_bonus / 6),
                 pacified: false,
             },
+            status_effects: Vec::new(),
         }
     }
 }

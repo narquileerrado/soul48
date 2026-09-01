@@ -7,9 +7,9 @@
 - [x] **Sistema de Cordura / Medidor de Voz:** Mecánica de desgaste mental en la penumbra de la mazmorra.
 
 ## ⚔️ 2. Profundidad Táctica en el Combate
-- [ ] **Ataques a Distancia y Magia:** Pergaminos de Rayo, Bola de Fuego, Teletransporte e Invisibilidad.
-- [ ] **Efectos de Estado (Status Effects):** Veneno, Sangrado, Congelación, Quemadura, Confusión y Ceguera.
-- [ ] **Habilidades Activas:** Embestida (pushback) y Bloqueo activo / Parry.
+- [x] **Ataques a Distancia y Magia:** Pergaminos de Rayo, Bola de Fuego, Teletransporte e Invisibilidad.
+- [x] **Efectos de Estado (Status Effects):** Estructura base de efectos de estado y procesamiento de daño por turno (Veneno, Sangrado, Quemadura, etc.).
+- [x] **Habilidades Activas:** Embestida (pushback con tecla 'E') y Bloqueo activo / Parry (tecla 'B').
 
 ## 🗺️ 3. Variedad de Terreno y Generación Procedural
 - [ ] **Peligros Ambientales:** Trampas de pinchos, pozos de ácido, charcos de aceite e incendios.

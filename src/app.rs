@@ -59,6 +59,17 @@ pub enum EntityType {
     EchoAltar {
         used: bool,
     },
+    Scroll {
+        scroll_type: ScrollType,
+    },
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum ScrollType {
+    Lightning,
+    Fireball,
+    Teleport,
+    Invisibility,
 }
 
 /// Categorías para los mensajes de registro (log).
@@ -90,6 +101,23 @@ impl Point {
 }
 
 /// Estructura base para cualquier objeto o criatura interactuable.
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum StatusEffectType {
+    Poison,
+    Bleed,
+    Freeze,
+    Burn,
+    Confusion,
+    Blindness,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct StatusEffect {
+    pub effect_type: StatusEffectType,
+    pub duration: usize,
+    pub damage_per_turn: i32,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Entity {
     pub pos: Point,
@@ -97,6 +125,8 @@ pub struct Entity {
     pub color: Color,
     pub name: String,
     pub e_type: EntityType,
+    #[serde(default)]
+    pub status_effects: Vec<StatusEffect>,
 }
 
 /// Estructura serializable para la persistencia del juego en disco.
@@ -107,6 +137,9 @@ pub struct SaveData {
     pub hero_max_hp: i32,
     pub sanity: i32,
     pub max_sanity: i32,
+    pub hero_status_effects: Vec<StatusEffect>,
+    pub parry_active: bool,
+    pub invisible_turns: usize,
     pub equipped_weapon: Option<(String, i32, i32)>,
     pub logs: Vec<LogMessage>,
     pub map: Vec<Vec<char>>,
@@ -125,6 +158,9 @@ pub struct App {
     pub hero_max_hp: i32,
     pub sanity: i32,
     pub max_sanity: i32,
+    pub hero_status_effects: Vec<StatusEffect>,
+    pub parry_active: bool,
+    pub invisible_turns: usize,
     pub equipped_weapon: Option<(String, i32, i32)>,
     pub logs: Vec<LogMessage>,
     pub map: Vec<Vec<char>>,
@@ -184,6 +220,9 @@ impl App {
             hero_max_hp: 20,
             sanity: 100,
             max_sanity: 100,
+            hero_status_effects: Vec::new(),
+            parry_active: false,
+            invisible_turns: 0,
             equipped_weapon: weapon,
             logs: vec![LogMessage {
                 text: format!("> NIVEL {} - SEED: {}", depth, seed),
@@ -300,6 +339,7 @@ impl App {
                                 min_dmg: 3 + dmg_bonus,
                                 max_dmg: 8 + dmg_bonus,
                             },
+                            status_effects: Vec::new(),
                         };
                     } else {
                         self.add_log(
@@ -344,9 +384,9 @@ impl App {
                     self.add_log("> El Altar de Ecos ha consumido su tributo.".into(), LogType::Info);
                 }
             }
-            EntityType::Item | EntityType::Key | EntityType::Weapon { .. } => {
+            EntityType::Item | EntityType::Key | EntityType::Weapon { .. } | EntityType::Scroll { .. } => {
                 let is_stackable =
-                    matches!(entity_clone.e_type, EntityType::Item | EntityType::Key);
+                    matches!(entity_clone.e_type, EntityType::Item | EntityType::Key | EntityType::Scroll { .. });
 
                 let stack_index = if is_stackable {
                     self.inventory
@@ -441,6 +481,39 @@ impl App {
         action_taken
     }
 
+    /// Ejecuta la habilidad activa de Embestida (Pushback) sobre un enemigo adyacente.
+    pub fn use_pushback(&mut self) -> bool {
+        let directions = [(0, -1), (0, 1), (-1, 0), (1, 0)];
+        for (dx, dy) in directions {
+            if let Some(target_pos) = Self::offset_point(self.hero_pos, dx, dy) {
+                if let Some(idx) = self.entities.iter().position(|e| e.pos == target_pos && matches!(e.e_type, EntityType::Mob { .. })) {
+                    let push_pos = Self::offset_point(target_pos, dx, dy);
+                    if let Some(p_pos) = push_pos {
+                        if p_pos.y < self.map.len() && p_pos.x < self.map[0].len() && self.map[p_pos.y][p_pos.x] == '.' {
+                            self.entities[idx].pos = p_pos;
+                            self.add_log(format!("> EMBESTIDA: Empujas a {} hacia atrás.", self.entities[idx].name), LogType::Combat);
+                            return true;
+                        }
+                    }
+                    self.add_log(format!("> EMBESTIDA: Impactas a {} contra la pared.", self.entities[idx].name), LogType::Combat);
+                    if let EntityType::Mob { ref mut hp, .. } = self.entities[idx].e_type {
+                        *hp -= 5;
+                    }
+                    return true;
+                }
+            }
+        }
+        self.add_log("> No hay enemigos adyacentes para embestir.".into(), LogType::Warning);
+        false
+    }
+
+    /// Activa la postura de Bloqueo / Parry para reducir el daño del próximo turno.
+    pub fn use_parry(&mut self) -> bool {
+        self.parry_active = true;
+        self.add_log("> BLOQUEO ACTIVO: Te preparas para desviar el próximo impacto.".into(), LogType::Info);
+        true
+    }
+
     /// Cierra el prompt de descenso.
     pub fn confirm_descent(&mut self) {
         self.show_descend_prompt = false;
@@ -462,6 +535,72 @@ impl App {
                     item_used = true;
                 }
             }
+            EntityType::Scroll { ref scroll_type } => {
+                match scroll_type {
+                    ScrollType::Lightning => {
+                        let mut hit_msgs = Vec::new();
+                        for entity in &mut self.entities {
+                            if matches!(entity.e_type, EntityType::Mob { .. }) {
+                                let dist = (self.hero_pos.x as isize - entity.pos.x as isize).abs()
+                                    + (self.hero_pos.y as isize - entity.pos.y as isize).abs();
+                                if dist <= 5 {
+                                    if let EntityType::Mob { ref mut hp, .. } = entity.e_type {
+                                        *hp -= 12;
+                                        hit_msgs.push(format!("> RAYO: ¡Impactas a {} con 12 daño de rayo!", entity.name));
+                                    }
+                                }
+                            }
+                        }
+                        if hit_msgs.is_empty() {
+                            self.add_log("> El pergamino de rayo chisporrotea sin blanco cercano.".into(), LogType::Warning);
+                        } else {
+                            for msg in hit_msgs {
+                                self.add_log(msg, LogType::Combat);
+                            }
+                        }
+                        item_used = true;
+                    }
+                    ScrollType::Fireball => {
+                        let mut hit_msgs = Vec::new();
+                        for entity in &mut self.entities {
+                            if matches!(entity.e_type, EntityType::Mob { .. }) {
+                                let dist = (self.hero_pos.x as isize - entity.pos.x as isize).abs()
+                                    + (self.hero_pos.y as isize - entity.pos.y as isize).abs();
+                                if dist <= 3 {
+                                    if let EntityType::Mob { ref mut hp, .. } = entity.e_type {
+                                        *hp -= 15;
+                                        hit_msgs.push(format!("> ¡{} sufre 15 daño por fuego!", entity.name));
+                                    }
+                                }
+                            }
+                        }
+                        self.add_log("> BOLA DE FUEGO: ¡Explosión de fuego cercana!".into(), LogType::Combat);
+                        for msg in hit_msgs {
+                            self.add_log(msg, LogType::Combat);
+                        }
+                        item_used = true;
+                    }
+                    ScrollType::Teleport => {
+                        let mut rng = rand::thread_rng();
+                        for _ in 0..100 {
+                            let rx = rng.gen_range(1..self.map[0].len() - 1);
+                            let ry = rng.gen_range(1..self.map.len() - 1);
+                            if self.map[ry][rx] == '.' {
+                                self.hero_pos = Point::new(rx, ry);
+                                self.add_log("> TELETRANSPORTE: Te desvaneces y reapareces en otro lugar.".into(), LogType::Info);
+                                self.calculate_fov();
+                                break;
+                            }
+                        }
+                        item_used = true;
+                    }
+                    ScrollType::Invisibility => {
+                        self.invisible_turns = 8;
+                        self.add_log("> INVISIBILIDAD: Tu cuerpo se vuelve transparente por 8 turnos.".into(), LogType::Info);
+                        item_used = true;
+                    }
+                }
+            }
             EntityType::Weapon { min_dmg, max_dmg } => {
                 if let Some(old_w) = &self.equipped_weapon {
                     self.inventory.push((
@@ -474,6 +613,7 @@ impl App {
                                 min_dmg: old_w.1,
                                 max_dmg: old_w.2,
                             },
+                            status_effects: Vec::new(),
                         },
                         1,
                     ));
@@ -549,6 +689,33 @@ impl App {
         let hy = self.hero_pos.y as isize;
         let mut messages = Vec::new();
 
+        // Procesar efectos de estado del héroe
+        let mut i = 0;
+        while i < self.hero_status_effects.len() {
+            let dmg = self.hero_status_effects[i].damage_per_turn;
+            if dmg > 0 {
+                self.hero_hp = (self.hero_hp - dmg).max(0);
+                self.add_log(
+                    format!("> Sufres {} daño por efecto de estado.", dmg),
+                    LogType::Warning,
+                );
+            }
+            self.hero_status_effects[i].duration -= 1;
+            if self.hero_status_effects[i].duration == 0 {
+                self.hero_status_effects.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+
+        // Decrementar invisibilidad
+        if self.invisible_turns > 0 {
+            self.invisible_turns -= 1;
+            if self.invisible_turns == 0 {
+                self.add_log("> La invisibilidad se disipa.".into(), LogType::Info);
+            }
+        }
+
         // Desgaste de cordura por turno
         if self.rng.gen_bool(0.15) && self.sanity > 0 {
             self.sanity -= 1;
@@ -595,16 +762,30 @@ impl App {
                 }
                 EnemyState::Aggressive => {
                     if dist == 1 {
-                        if let EntityType::Mob {
+                        if self.invisible_turns > 0 {
+                            messages.push((
+                                format!("> {} no puede verte en las sombras.", name),
+                                LogType::Info,
+                            ));
+                        } else if let EntityType::Mob {
                             min_dmg, max_dmg, ..
                         } = self.entities[i].e_type
                         {
-                            let dmg = self.rng.gen_range(min_dmg..=max_dmg);
+                            let mut dmg = self.rng.gen_range(min_dmg..=max_dmg);
+                            if self.parry_active {
+                                dmg = (dmg / 2).max(1);
+                                self.parry_active = false;
+                                messages.push((
+                                    format!("> ¡PARRY! Desvías el golpe de {} (recibes sólo {} daño)", name, dmg),
+                                    LogType::Info,
+                                ));
+                            } else {
+                                messages.push((
+                                    format!("> {} te golpea ({} daño)", name, dmg),
+                                    LogType::Warning,
+                                ));
+                            }
                             self.hero_hp = (self.hero_hp - dmg).max(0);
-                            messages.push((
-                                format!("> {} te golpea ({} daño)", name, dmg),
-                                LogType::Warning,
-                            ));
                         }
                     } else {
                         match ai {
@@ -744,6 +925,9 @@ impl App {
             hero_max_hp: self.hero_max_hp,
             sanity: self.sanity,
             max_sanity: self.max_sanity,
+            hero_status_effects: self.hero_status_effects.clone(),
+            parry_active: self.parry_active,
+            invisible_turns: self.invisible_turns,
             equipped_weapon: self.equipped_weapon.clone(),
             logs: self.logs.clone(),
             map: self.map.clone(),
@@ -779,6 +963,9 @@ impl App {
             hero_max_hp: save_data.hero_max_hp,
             sanity: save_data.sanity,
             max_sanity: save_data.max_sanity,
+            hero_status_effects: save_data.hero_status_effects,
+            parry_active: save_data.parry_active,
+            invisible_turns: save_data.invisible_turns,
             equipped_weapon: save_data.equipped_weapon,
             logs: save_data.logs,
             map: save_data.map,
@@ -909,6 +1096,7 @@ mod tests {
             color: Color::Magenta,
             name: "Poción de Curación".to_string(),
             e_type: EntityType::Item,
+            status_effects: Vec::new(),
         };
         app.inventory.push((potion, 1));
 
@@ -927,6 +1115,7 @@ mod tests {
             color: Color::Magenta,
             name: "Poción de Curación".to_string(),
             e_type: EntityType::Item,
+            status_effects: Vec::new(),
         };
         app.inventory.push((potion, 1));
 
@@ -951,6 +1140,7 @@ mod tests {
                 message: "Un secreto te aguarda.".to_string(),
                 whispered: false,
             },
+            status_effects: Vec::new(),
         });
 
         // Hero interacts with talking wall by trying to move into it
@@ -972,6 +1162,7 @@ mod tests {
             color: Color::Red,
             name: "Altar de Ecos".to_string(),
             e_type: EntityType::EchoAltar { used: false },
+            status_effects: Vec::new(),
         });
 
         let initial_hp = app.hero_hp;
@@ -1002,6 +1193,7 @@ mod tests {
                 defense: 2,
                 pacified: false,
             },
+            status_effects: Vec::new(),
         });
 
         let initial_sanity = app.sanity;
@@ -1012,6 +1204,84 @@ mod tests {
             assert!(pacified);
         } else {
             panic!("Expected Mob entity");
+        }
+    }
+
+    #[test]
+    fn test_use_pushback_and_parry() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+
+        // Test Parry
+        assert!(app.use_parry());
+        assert!(app.parry_active);
+
+        // Test Pushback with adjacent mob
+        let target_pos = Point::new(app.hero_pos.x + 1, app.hero_pos.y);
+        app.map[target_pos.y][target_pos.x] = '.';
+        let empty_pos = Point::new(app.hero_pos.x + 2, app.hero_pos.y);
+        app.map[empty_pos.y][empty_pos.x] = '.';
+
+        app.entities.push(Entity {
+            pos: target_pos,
+            glyph: 'g',
+            color: Color::Red,
+            name: "Gnoll".to_string(),
+            e_type: EntityType::Mob {
+                hp: 20,
+                max_hp: 20,
+                state: EnemyState::Aggressive,
+                ai: EnemyAI::Melee,
+                min_dmg: 4,
+                max_dmg: 6,
+                defense: 1,
+                pacified: false,
+            },
+            status_effects: Vec::new(),
+        });
+
+        assert!(app.use_pushback());
+        assert_eq!(app.entities.last().unwrap().pos, empty_pos);
+    }
+
+    #[test]
+    fn test_scroll_usage() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+
+        let scroll = Entity {
+            pos: Point::new(0, 0),
+            glyph: '?',
+            color: Color::LightCyan,
+            name: "Pergamino de Rayo".to_string(),
+            e_type: EntityType::Scroll { scroll_type: ScrollType::Lightning },
+            status_effects: Vec::new(),
+        };
+        app.inventory.push((scroll, 1));
+
+        let mob_pos = Point::new(app.hero_pos.x + 1, app.hero_pos.y);
+        app.entities.push(Entity {
+            pos: mob_pos,
+            glyph: 'g',
+            color: Color::Red,
+            name: "Gnoll".to_string(),
+            e_type: EntityType::Mob {
+                hp: 20,
+                max_hp: 20,
+                state: EnemyState::Aggressive,
+                ai: EnemyAI::Melee,
+                min_dmg: 4,
+                max_dmg: 6,
+                defense: 1,
+                pacified: false,
+            },
+            status_effects: Vec::new(),
+        });
+
+        assert!(app.use_item(0));
+        assert!(app.inventory.is_empty());
+        if let EntityType::Mob { hp, .. } = app.entities.last().unwrap().e_type {
+            assert_eq!(hp, 8); // 20 - 12 = 8
         }
     }
 }

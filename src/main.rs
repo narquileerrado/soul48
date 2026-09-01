@@ -192,6 +192,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                                     action_taken = app.try_move(1, 0);
                                 }
 
+                                KeyCode::Char('e') | KeyCode::Char('E') => {
+                                    action_taken = app.use_pushback();
+                                }
+
+                                KeyCode::Char('b') | KeyCode::Char('B') => {
+                                    action_taken = app.use_parry();
+                                }
+
                                 KeyCode::Char('d') => {
                                     app.drop_mode = !app.drop_mode;
                                     if app.drop_mode {
