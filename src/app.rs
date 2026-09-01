@@ -41,6 +41,7 @@ pub enum EntityType {
         min_dmg: i32,
         max_dmg: i32,
         defense: i32,
+        pacified: bool,
     },
     Item,
     Weapon {
@@ -104,6 +105,8 @@ pub struct SaveData {
     pub hero_pos: Point,
     pub hero_hp: i32,
     pub hero_max_hp: i32,
+    pub sanity: i32,
+    pub max_sanity: i32,
     pub equipped_weapon: Option<(String, i32, i32)>,
     pub logs: Vec<LogMessage>,
     pub map: Vec<Vec<char>>,
@@ -120,6 +123,8 @@ pub struct App {
     pub hero_pos: Point,
     pub hero_hp: i32,
     pub hero_max_hp: i32,
+    pub sanity: i32,
+    pub max_sanity: i32,
     pub equipped_weapon: Option<(String, i32, i32)>,
     pub logs: Vec<LogMessage>,
     pub map: Vec<Vec<char>>,
@@ -177,6 +182,8 @@ impl App {
             hero_pos,
             hero_hp: hp.unwrap_or(20),
             hero_max_hp: 20,
+            sanity: 100,
+            max_sanity: 100,
             equipped_weapon: weapon,
             logs: vec![LogMessage {
                 text: format!("> NIVEL {} - SEED: {}", depth, seed),
@@ -216,41 +223,56 @@ impl App {
 
         match &mut entity_clone.e_type {
             EntityType::Mob {
-                hp, state, defense, ..
+                hp, state, defense, pacified, ..
             } => {
-                let (mut min_d, mut max_d) = self
-                    .equipped_weapon
-                    .as_ref()
-                    .map(|w| (w.1, w.2))
-                    .unwrap_or((1, 3));
-                if min_d > max_d {
-                    std::mem::swap(&mut min_d, &mut max_d);
-                }
-
-                let mut damage = self.rng.gen_range(min_d..=max_d);
-                damage = (damage - *defense).max(1);
-
-                if self.rng.gen_bool(0.2) {
-                    damage *= 2;
-                    self.add_log(format!("> CRÍTICO: ¡{} daño!", damage), LogType::Combat);
+                if *pacified {
+                    self.add_log(format!("> {} ignora tu presencia en paz.", entity_clone.name), LogType::Info);
+                    move_allowed = false;
+                } else if entity_clone.name.contains("Ladrón") && *state != EnemyState::Aggressive && self.sanity >= 20 {
+                    // Oportunidad de negociación pacífica con el espíritu / espíritu errante
+                    *pacified = true;
+                    self.sanity -= 10;
+                    self.add_log(
+                        format!("> NEGOCIACIÓN: Calmas al {} entregando un fragmento de tu voz (-10 Cordura).", entity_clone.name),
+                        LogType::Info,
+                    );
+                    self.entities[index] = entity_clone;
+                    move_allowed = false;
                 } else {
-                    self.add_log(
-                        format!("> {} daño a {}.", damage, entity_clone.name),
-                        LogType::Combat,
-                    );
-                }
-                *hp -= damage;
-                *state = EnemyState::Aggressive;
+                    let (mut min_d, mut max_d) = self
+                        .equipped_weapon
+                        .as_ref()
+                        .map(|w| (w.1, w.2))
+                        .unwrap_or((1, 3));
+                    if min_d > max_d {
+                        std::mem::swap(&mut min_d, &mut max_d);
+                    }
 
-                if *hp <= 0 {
-                    self.add_log(
-                        format!("> {} eliminada.", entity_clone.name),
-                        LogType::Combat,
-                    );
-                    entity_index_to_remove = Some(index);
+                    let mut damage = self.rng.gen_range(min_d..=max_d);
+                    damage = (damage - *defense).max(1);
+
+                    if self.rng.gen_bool(0.2) {
+                        damage *= 2;
+                        self.add_log(format!("> CRÍTICO: ¡{} daño!", damage), LogType::Combat);
+                    } else {
+                        self.add_log(
+                            format!("> {} daño a {}.", damage, entity_clone.name),
+                            LogType::Combat,
+                        );
+                    }
+                    *hp -= damage;
+                    *state = EnemyState::Aggressive;
+
+                    if *hp <= 0 {
+                        self.add_log(
+                            format!("> {} eliminada.", entity_clone.name),
+                            LogType::Combat,
+                        );
+                        entity_index_to_remove = Some(index);
+                    }
+                    self.entities[index] = entity_clone;
+                    move_allowed = false;
                 }
-                self.entities[index] = entity_clone;
-                move_allowed = false;
             }
             EntityType::Chest { locked } => {
                 move_allowed = false;
@@ -527,17 +549,30 @@ impl App {
         let hy = self.hero_pos.y as isize;
         let mut messages = Vec::new();
 
+        // Desgaste de cordura por turno
+        if self.rng.gen_bool(0.15) && self.sanity > 0 {
+            self.sanity -= 1;
+            if self.sanity == 0 {
+                self.add_log("> TUS PENSAMIENTOS SE COLAPSAN EN EL SILENCIO.".into(), LogType::Warning);
+            }
+        }
+
         for i in 0..self.entities.len() {
-            let (mut current_state, ai, ex, ey, name) = match &self.entities[i].e_type {
-                EntityType::Mob { state, ai, .. } => (
+            let (mut current_state, ai, ex, ey, name, pacified) = match &self.entities[i].e_type {
+                EntityType::Mob { state, ai, pacified, .. } => (
                     state.clone(),
                     ai.clone(),
                     self.entities[i].pos.x as isize,
                     self.entities[i].pos.y as isize,
                     self.entities[i].name.clone(),
+                    *pacified,
                 ),
                 _ => continue,
             };
+
+            if pacified {
+                continue;
+            }
 
             let dist = (hx - ex).abs() + (hy - ey).abs();
 
@@ -707,6 +742,8 @@ impl App {
             hero_pos: self.hero_pos,
             hero_hp: self.hero_hp,
             hero_max_hp: self.hero_max_hp,
+            sanity: self.sanity,
+            max_sanity: self.max_sanity,
             equipped_weapon: self.equipped_weapon.clone(),
             logs: self.logs.clone(),
             map: self.map.clone(),
@@ -740,6 +777,8 @@ impl App {
             hero_pos: save_data.hero_pos,
             hero_hp: save_data.hero_hp,
             hero_max_hp: save_data.hero_max_hp,
+            sanity: save_data.sanity,
+            max_sanity: save_data.max_sanity,
             equipped_weapon: save_data.equipped_weapon,
             logs: save_data.logs,
             map: save_data.map,
@@ -940,5 +979,39 @@ mod tests {
         assert!(moved);
         assert_eq!(app.hero_hp, initial_hp - 5); // 5 HP traded
         assert!(app.explored[0][0]); // Map revealed
+    }
+
+    #[test]
+    fn test_spirit_negotiation() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+        let thief_pos = Point::new(app.hero_pos.x + 1, app.hero_pos.y);
+        app.map[thief_pos.y][thief_pos.x] = '.';
+        app.entities.push(Entity {
+            pos: thief_pos,
+            glyph: 'L',
+            color: Color::Blue,
+            name: "Ladrón".to_string(),
+            e_type: EntityType::Mob {
+                hp: 18,
+                max_hp: 18,
+                state: EnemyState::Wandering,
+                ai: EnemyAI::Coward,
+                min_dmg: 2,
+                max_dmg: 5,
+                defense: 2,
+                pacified: false,
+            },
+        });
+
+        let initial_sanity = app.sanity;
+        let action = app.try_move(1, 0);
+        assert!(action);
+        assert_eq!(app.sanity, initial_sanity - 10);
+        if let EntityType::Mob { pacified, .. } = &app.entities.last().unwrap().e_type {
+            assert!(pacified);
+        } else {
+            panic!("Expected Mob entity");
+        }
     }
 }

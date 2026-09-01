@@ -94,8 +94,8 @@ pub fn ui(f: &mut Frame, app: &App) {
         "Puños (1-3)".to_string()
     };
     let stats = format!(
-        "PISO: {}\nHP: {}/{}\nARMA: {}\nSEED: {}",
-        app.depth, app.hero_hp, app.hero_max_hp, weapon_text, app.seed
+        "PISO: {}\nHP: {}/{}\nCORDURA: {}/{}\nARMA: {}\nSEED: {}",
+        app.depth, app.hero_hp, app.hero_max_hp, app.sanity, app.max_sanity, weapon_text, app.seed
     );
     f.render_widget(
         Paragraph::new(stats).block(

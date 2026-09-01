@@ -287,6 +287,7 @@ impl MapBuilder {
                 min_dmg: selected.damage.0 + (difficulty_bonus / 4),
                 max_dmg: selected.damage.1 + (difficulty_bonus / 4),
                 defense: selected.defense + (difficulty_bonus / 6),
+                pacified: false,
             },
         }
     }
