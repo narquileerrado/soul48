@@ -89,6 +89,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                                         MainMenuOption::Bestiary => {
                                             app.state = GameState::Bestiary;
                                         }
+                                        MainMenuOption::LoadGame => {
+                                            if let Ok(loaded_app) = App::load_from_file("savegame.json") {
+                                                app = loaded_app;
+                                            } else {
+                                                app.add_log("> No se encontró ninguna partida guardada.".into(), LogType::Warning);
+                                            }
+                                        }
                                         MainMenuOption::Quit => break,
                                         _ => {}
                                     }
@@ -168,7 +175,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                             let mut action_taken = false;
                             match key.code {
-                                KeyCode::Char('q') | KeyCode::Esc => break,
+                                KeyCode::Char('q') | KeyCode::Esc => {
+                                    let _ = app.save_to_file("savegame.json");
+                                    break;
+                                }
                                 KeyCode::Up => {
                                     action_taken = app.try_move(0, -1);
                                 }

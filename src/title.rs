@@ -57,7 +57,7 @@ impl MainMenuOption {
         match self {
             MainMenuOption::StartGame => "Inicia tu ascenso desde el piso 1. Recupera tu alma.",
             MainMenuOption::Bestiary => "Estudia a los moradores de las profundidades.",
-            MainMenuOption::LoadGame => "Continúa una partida guardada. (Próximamente)",
+            MainMenuOption::LoadGame => "Continúa una partida guardada anteriormente.",
             MainMenuOption::Options => "Ajusta la configuración de audio y controles.",
             MainMenuOption::Quit => "Abandona el juego y regresa al sistema.",
         }
