@@ -7,12 +7,32 @@ use crate::settings::Settings;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
+
+/// La misma forma que `SaveData`, pero prestada.
+///
+/// Guardar clonaba el mapa, las entidades y los 200 mensajes del historial
+/// enteros sólo para entregárselos a `serde`. Escribir es de sólo lectura:
+/// alcanza con prestarlos. `SaveData` sigue igual para el camino de vuelta,
+/// donde sí hace falta ser dueño de los datos.
+#[derive(Serialize)]
+struct SaveDataRef<'a> {
+    player: &'a Player,
+    logs: &'a VecDeque<LogMessage>,
+    map: &'a Vec<Vec<char>>,
+    visible: &'a Vec<Vec<bool>>,
+    explored: &'a Vec<Vec<bool>>,
+    entities: &'a Vec<Entity>,
+    inventory: &'a Vec<(Entity, usize)>,
+    seed: u64,
+    depth: u32,
+}
 
 /// Estructura serializable para la persistencia del juego en disco.
 #[derive(Serialize, Deserialize)]
 pub struct SaveData {
     pub player: Player,
-    pub logs: Vec<LogMessage>,
+    pub logs: VecDeque<LogMessage>,
     pub map: Vec<Vec<char>>,
     pub visible: Vec<Vec<bool>>,
     pub explored: Vec<Vec<bool>>,
@@ -25,14 +45,14 @@ pub struct SaveData {
 impl App {
     /// Guarda el estado actual de la partida en el archivo especificado.
     pub fn save_to_file(&self, filepath: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let save_data = SaveData {
-            player: self.player.clone(),
-            logs: self.logs.clone(),
-            map: self.map.clone(),
-            visible: self.visible.clone(),
-            explored: self.explored.clone(),
-            entities: self.entities.clone(),
-            inventory: self.inventory.clone(),
+        let save_data = SaveDataRef {
+            player: &self.player,
+            logs: &self.logs,
+            map: &self.map,
+            visible: &self.visible,
+            explored: &self.explored,
+            entities: &self.entities,
+            inventory: &self.inventory,
             seed: self.seed,
             depth: self.depth,
         };
@@ -61,6 +81,7 @@ impl App {
             seed: save_data.seed,
             depth: save_data.depth,
 
+            resbalon_pendiente: false,
             drop_mode: false,
             show_descend_prompt: false,
 

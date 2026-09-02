@@ -9,6 +9,10 @@
 use crate::app::{EnemyAI, StatusEffectType};
 use ratatui::style::Color;
 
+/// El jefe final. Su caída termina la corrida, así que el nombre lo consultan
+/// tanto la generación del piso 48 como `reap_dead`.
+pub const ARCHIDEMONIO: &str = "ARCHIDEMONIO DEL SILENCIO";
+
 /// Todo lo que se sabe de una criatura: lo que la mueve y lo que se cuenta de ella.
 pub struct BestiaryEntry {
     pub name: &'static str,
@@ -36,7 +40,7 @@ pub struct BestiaryEntry {
 
 /// El catálogo. Es `static` y no una función que arma un `Vec`: lo consultan
 /// el render y cada pulsación de flecha del compendio.
-pub static BESTIARIO: [BestiaryEntry; 11] = [
+pub static BESTIARIO: [BestiaryEntry; 16] = [
     BestiaryEntry {
         name: "Murciélago de Cripta",
         short_name: "Murciélago",
@@ -224,11 +228,96 @@ pub static BESTIARIO: [BestiaryEntry; 11] = [
         aplica: Some(StatusEffectType::Blindness),
         xp: 70,
     },
+    /* --- los cinco jefes. Peso 0 en todos los tramos: no los pone el spawn
+       aleatorio sino `MapBuilder`, en el piso que les toca. Están acá para
+       tener ficha en el Compendio y para que su experiencia salga de la misma
+       tabla que la del resto. --- */
+    BestiaryEntry {
+        name: "Osario Mayor",
+        short_name: "Osario Mayor",
+        scientific_name: "Ossuarium Rex",
+        taxonomy: "Reino: Desconocido | Filo: Osteomorpha | Clase: Congregata | Orden: Regens",
+        description: "Lo que queda cuando una cripta entera decide levantarse junta. Guarda la salida de Las Criptas y no por orden de nadie: simplemente es lo más grande que hay en doce pisos y se quedó donde había lugar.",
+        glyph: 'B',
+        color: crate::theme::ROJO_ALTAR,
+        base_hp: 86,
+        base_damage: (11, 16),
+        base_defense: 6,
+        behavior: "Guardián del primer tramo. Cierra el piso 12.",
+        ai: EnemyAI::Melee,
+        spawn_weight: [0, 0, 0, 0],
+        aplica: None,
+        xp: 120,
+    },
+    BestiaryEntry {
+        name: "Custodio de los Nombres",
+        short_name: "Custodio de los Nombres",
+        scientific_name: "Custos Nominum",
+        taxonomy: "Reino: Desconocido | Filo: Aphotica | Clase: Archivaria | Orden: Custodes",
+        description: "Fue el que tachó los nombres de las paredes, uno por uno, y se quedó cuidando el trabajo. Conoce el tuyo. Que no pueda decirlo es lo único que te está salvando.",
+        glyph: 'B',
+        color: crate::theme::ROJO_ALTAR,
+        base_hp: 122,
+        base_damage: (17, 22),
+        base_defense: 8,
+        behavior: "Guardián del segundo tramo. Cierra el piso 24.",
+        ai: EnemyAI::Melee,
+        spawn_weight: [0, 0, 0, 0],
+        aplica: Some(StatusEffectType::Confusion),
+        xp: 200,
+    },
+    BestiaryEntry {
+        name: "Boca del Abismo",
+        short_name: "Boca del Abismo",
+        scientific_name: "Os Profundi",
+        taxonomy: "Reino: Desconocido | Filo: Amorphobionta | Clase: Vorax | Orden: Fauces",
+        description: "No es que viva en el Abismo: es la parte del Abismo que se molestó en tener forma. Cierra el tramo porque más abajo ya no hace falta que nada tenga forma.",
+        glyph: 'B',
+        color: crate::theme::ROJO_ALTAR,
+        base_hp: 158,
+        base_damage: (23, 28),
+        base_defense: 11,
+        behavior: "Guardián del tercer tramo. Cierra el piso 36.",
+        ai: EnemyAI::Melee,
+        spawn_weight: [0, 0, 0, 0],
+        aplica: Some(StatusEffectType::Bleed),
+        xp: 320,
+    },
+    BestiaryEntry {
+        name: "Heraldo Mayor",
+        short_name: "Heraldo Mayor",
+        scientific_name: "Praeco Maximus",
+        taxonomy: "Reino: Desconocido | Filo: Aphotica | Clase: Ministra | Orden: Praecones",
+        description: "El último que vas a encontrar antes del final, y el único que sabe exactamente lo que estás por escuchar. Anuncia al Archidemonio quedándose callado, que es la forma más honesta que tiene de anunciarlo.",
+        glyph: 'B',
+        color: crate::theme::ROJO_ALTAR,
+        base_hp: 194,
+        base_damage: (29, 34),
+        base_defense: 13,
+        behavior: "Guardián del último tramo. Cierra el piso 48... casi.",
+        ai: EnemyAI::Melee,
+        spawn_weight: [0, 0, 0, 0],
+        aplica: Some(StatusEffectType::Blindness),
+        xp: 450,
+    },
+    BestiaryEntry {
+        name: "Archidemonio del Silencio",
+        short_name: ARCHIDEMONIO,
+        scientific_name: "Daemon Silentii",
+        taxonomy: "Reino: Desconocido | Filo: Innominata | Clase: Unica | Orden: Unica",
+        description: "Te sacó la voz y se quedó con ella cuarenta y ocho pisos más abajo, donde nadie iba a ir a buscarla. Se equivocó en una sola cosa, y es la que estás por demostrarle. No tiene ficha completa porque nadie que lo haya visto de cerca volvió a escribir.",
+        glyph: 'D',
+        color: crate::theme::VIOLETA,
+        base_hp: 150,
+        base_damage: (8, 16),
+        base_defense: 6,
+        behavior: "El final del descenso. Piso 48.",
+        ai: EnemyAI::Melee,
+        spawn_weight: [0, 0, 0, 0],
+        aplica: None,
+        xp: 500,
+    },
 ];
-
-/// El jefe final. Su caída termina la corrida, así que el nombre lo consultan
-/// tanto la generación del piso 48 como `reap_dead`.
-pub const ARCHIDEMONIO: &str = "ARCHIDEMONIO DEL SILENCIO";
 
 /// Experiencia que deja una criatura, buscada por el nombre con el que aparece
 /// en el mapa. Los jefes no están en el compendio y tienen su propia tabla.
@@ -236,9 +325,9 @@ pub fn xp_de(nombre: &str) -> u32 {
     if let Some(e) = BESTIARIO.iter().find(|e| e.short_name == nombre) {
         return e.xp;
     }
+    // los jefes ya están en el catálogo: no hay más tabla aparte
     match nombre {
-        ARCHIDEMONIO => 500,
-        n if n.starts_with("Guardián") => 80,
+        n if n.starts_with("Eco del ") => 80,
         _ => 15,
     }
 }

@@ -7,10 +7,25 @@ use crate::balance;
 use rand::Rng;
 
 impl App {
+    /// Si hay una casilla con fuego pegada a esta.
+    fn hay_fuego_junto_a(&self, pos: Point) -> bool {
+        self.entities.iter().any(|e| {
+            matches!(
+                e.e_type,
+                EntityType::Hazard {
+                    hazard_type: HazardType::Fire
+                }
+            ) && (e.pos.x as isize - pos.x as isize).abs() <= 1
+                && (e.pos.y as isize - pos.y as isize).abs() <= 1
+        })
+    }
+
     /// Gestiona la interacción física o lógica con una entidad en el mapa.
     pub(super) fn interact_with_entity(&mut self, index: usize) -> (bool, bool) {
         let mut entity_clone = self.entities[index].clone();
         let mut move_allowed = true;
+        // el aceite empuja un paso más en la misma dirección
+        let mut resbala = false;
         let mut entity_index_to_remove = None;
         // casi todo choque consume el turno; los que no hacen nada, no
         let mut accion_real = true;
@@ -237,10 +252,29 @@ impl App {
                         );
                     }
                     HazardType::Oil => {
-                        self.add_log(
-                            "> CHARCO DE ACEITE: El suelo resbaladizo dificulta tus pasos.".into(),
-                            LogType::Info,
-                        );
+                        // Antes esto era sólo una línea en el historial. Ahora
+                        // el aceite hace lo que anuncia: o te arrastra un paso
+                        // más, o se prende si hay fuego al lado.
+                        let ardiendo = self.hay_fuego_junto_a(entity_clone.pos);
+                        if ardiendo {
+                            let (dano, turnos, por_turno) = balance::terreno::FUEGO;
+                            self.player.hp = (self.player.hp - dano).max(0);
+                            self.player.status_effects.push(StatusEffect {
+                                effect_type: StatusEffectType::Burn,
+                                duration: turnos,
+                                damage_per_turn: por_turno,
+                            });
+                            self.add_log(
+                                format!("> ¡EL ACEITE PRENDE! Sufres {} daño y te quemas.", dano),
+                                LogType::Warning,
+                            );
+                        } else {
+                            resbala = true;
+                            self.add_log(
+                                "> CHARCO DE ACEITE: Resbalás y te llevás un paso de más.".into(),
+                                LogType::Info,
+                            );
+                        }
                     }
                     HazardType::Fire => {
                         let (dano, turnos, por_turno) = balance::terreno::FUEGO;
@@ -325,6 +359,7 @@ impl App {
             self.entities.remove(i);
         }
 
+        self.resbalon_pendiente = resbala;
         (move_allowed, accion_real)
     }
 }

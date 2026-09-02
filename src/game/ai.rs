@@ -87,6 +87,9 @@ impl App {
             );
         }
 
+        // una sola pasada por el piso para todos los enemigos del turno
+        let campo = self.flow_field();
+
         for i in 0..self.entities.len() {
             let (mut current_state, ai, ex, ey, name, pacified) = match &self.entities[i].e_type {
                 EntityType::Mob {
@@ -110,6 +113,12 @@ impl App {
             }
 
             let dist = (hx - ex).abs() + (hy - ey).abs();
+            // Los mobs se mueven en ocho direcciones, así que la adyacencia
+            // para pegar también tiene que contar las diagonales: con la
+            // distancia Manhattan, uno parado en diagonal no atacaba nunca y
+            // tampoco podía avanzar —la casilla del héroe está ocupada—, y
+            // quedaba trabado ahí para siempre.
+            let adyacente = (hx - ex).abs().max((hy - ey).abs()) == 1;
 
             if current_state == EnemyState::Asleep
                 && dist < balance::percepcion::DISTANCIA_DESPERTAR
@@ -133,7 +142,7 @@ impl App {
                     }
                 }
                 EnemyState::Aggressive => {
-                    if dist == 1 {
+                    if adyacente {
                         if self.player.invisible_turns > 0 {
                             messages.push((
                                 format!("> {} no puede verte en las sombras.", name),
@@ -174,6 +183,16 @@ impl App {
                             self.player.hp = (self.player.hp - dmg).max(0);
                             self.player.damage_flash_turns = 1;
 
+                            // «prefiere atacar y huir»: antes atacaba y se
+                            // quedaba pegado al héroe hasta que uno de los dos
+                            // caía
+                            if ai == EnemyAI::Coward {
+                                let desde = self.entities[i].pos;
+                                if let Some((mx, my)) = self.paso_lejos_del_heroe(desde, &campo) {
+                                    self.move_mob(i, mx, my);
+                                }
+                            }
+
                             // la serpiente envenena, el heraldo ciega: sale del
                             // catálogo, no de un `match` sobre el nombre
                             if dmg > 0 {
@@ -198,16 +217,19 @@ impl App {
                             }
                         }
                     } else {
+                        let desde = self.entities[i].pos;
                         match ai {
+                            // el campo de flujo dobla las esquinas; el paso
+                            // greedy de antes se trababa contra la pared
                             EnemyAI::Melee | EnemyAI::Wandering => {
-                                let mx = (hx - ex).signum();
-                                let my = (hy - ey).signum();
-                                self.move_mob(i, mx, my);
+                                if let Some((mx, my)) = self.paso_hacia_el_heroe(desde, &campo) {
+                                    self.move_mob(i, mx, my);
+                                }
                             }
                             EnemyAI::Coward => {
-                                let mx = (ex - hx).signum();
-                                let my = (ey - hy).signum();
-                                self.move_mob(i, mx, my);
+                                if let Some((mx, my)) = self.paso_lejos_del_heroe(desde, &campo) {
+                                    self.move_mob(i, mx, my);
+                                }
                             }
                             EnemyAI::Stationary => {}
                         }

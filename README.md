@@ -19,6 +19,8 @@
 
 ## 🚀 Características
 
+- **Un Descenso en Cuatro Tramos:** Los 48 pisos se dividen en **Las Criptas** (1-12), **Las Catacumbas** (13-24), **El Abismo** (25-36) y **El Silencio** (37-48). Cada tramo tiene su paleta, su pool de criaturas, sus susurros y el Guardián que lo cierra. Un jefe cada seis pisos, y el Archidemonio del Silencio esperando en el 48.
+- **Victoria y Permadeath:** Matar al Archidemonio termina la corrida. La partida se guarda sola al cambiar de piso, pero morir —o ganar— disuelve el fragmento: no se recarga el piso anterior para volver a intentarlo.
 - **Generación Procedural de Mazmorras:** Cada nivel es único, con habitaciones, túneles y entidades distribuidas procedimentalmente.
 - **Sistema de Visión (FOV):** El mapa se revela a medida que exploras, manteniendo las áreas visitadas en un tono tenue.
 - **Entidades Narrativas Interactivas:**
@@ -28,7 +30,9 @@
 - **Sintonizar Alma:** Pantalla de ajustes con brillo de lo recordado, líneas del historial, glifos unicode/ASCII y guardado automático. Se guardan en `settings.json`.
 - **Sistema de Guardado y Carga de Partida:** Persistencia completa del estado del juego (`savegame.json`). Tu progreso se guarda automáticamente al salir y puedes reanudarlo en cualquier momento desde el menú principal (*RECOGER FRAGMENTOS*).
 - **Combate por Turnos:** Ataca a los enemigos moviéndote hacia ellos. El daño sale de tu arma más tu Fuerza, menos la defensa del enemigo; el suyo se descuenta con tu armadura y tu casco, y tu Agilidad te da una chance de esquivar.
-- **Enemigos con IA Adaptativa:** Mobs dormidos, errantes, agresivos, cobardes y estáticos (mímicos).
+- **Enemigos que Doblan la Esquina:** Un campo de flujo calculado por BFS desde el héroe: los mobs rodean los muros en vez de trabarse contra ellos, y las puertas cerradas les cortan el paso igual que a vos. Dormidos, errantes, agresivos, cobardes y estáticos.
+- **Efectos de Estado en los Dos Sentidos:** Veneno, sangrado, quemadura, confusión y ceguera. La Serpiente envenena, el Heraldo te apaga la vista, y un enemigo envenenado se muere solo.
+- **Once Criaturas y Cinco Jefes** documentados en el Compendio, con las mismas estadísticas que te vas a cruzar en el mapa.
 - **Sistema de Inventario:** Recoge pociones, armas, llaves y otros objetos. Úsalos o descártalos según necesites.
 - **Entidades Interactivas:** Cofres cerrados que requieren llaves y escaleras para descender de piso.
 - **Persistencia entre Niveles:** Al descender conservás todo: salud, cordura, nivel, experiencia, atributos, las cinco ranuras de equipo y el inventario. Lo único que cambia es el piso.
@@ -105,7 +109,7 @@ Sigue estos pasos para poner en marcha el juego:
 - **1-9:**
     - **Modo Normal:** Usar o equipar el objeto correspondiente del inventario.
     - **Modo Descartar:** Dejar el objeto en el suelo.
-- **S / Enter:** Confirmar para descender por las escaleras (cuando se te pregunte).
+- **S / Enter:** Confirmar para descender por las escaleras (cuando se te pregunte). La partida se guarda sola al bajar.
 - **N / Esc:** Cancelar el descenso.
 - **Clic Izquierdo del Ratón:** Inspeccionar una casilla visible en el mapa para obtener información en el historial.
 
@@ -126,7 +130,9 @@ tests de integración de `tests/` puedan armar partidas completas.
 -   `game/`: El núcleo de la lógica, un archivo por sistema: `mod.rs` (estado y turno), `interaction.rs` (choques contra entidades), `combat.rs`, `inventory.rs`, `ai.rs`, `fov.rs`, `map.rs` y `save.rs`.
 -   `ui/`: El dibujo, un archivo por pantalla: `widgets.rs` (piezas compartidas), `juego.rs`, `compendio.rs` y `opciones.rs`.
 -   `map_builder.rs`: Responsable de la generación procedimental de los niveles. Implementa el algoritmo de excavación de habitaciones y túneles, así como la colocación aleatoria de enemigos y objetos.
--   `bestiary.rs`: El catálogo de criaturas. Es la **única** fuente: de acá salen tanto los mobs que genera el mapa como las fichas del Compendio, así que lo que leés en el compendio es lo que te vas a cruzar.
+-   `bestiary.rs`: El catálogo de criaturas. Es la **única** fuente: de acá salen los mobs que genera el mapa, los jefes y las fichas del Compendio, así que lo que leés en el compendio es lo que te vas a cruzar.
+-   `world/tramo.rs`: Los cuatro tramos del descenso, con su paleta, sus voces y su Guardián.
+-   `game/pathing.rs`: El campo de flujo que usan los enemigos para encontrarte.
 -   `title.rs`: Se encarga exclusivamente de la lógica y presentación de la pantalla de título y el menú principal.
 -   `player.rs`: El héroe: sus números, sus atributos, sus cinco ranuras de equipo y todo lo que de ellos se deriva.
 -   `balance.rs`: Los números que definen cómo se siente el juego, agrupados por tema. El balance se ajusta acá sin leer la lógica.
@@ -145,7 +151,9 @@ cargo fmt --check && cargo clippy -- -D warnings
 
 -   `tests/basicos.rs`: mecánicas puntuales.
 -   `tests/mecanicas.rs`: escenarios de varios turnos sobre una sala controlada (`App::arena`), reproducibilidad de la semilla y una partida larga que verifica invariantes.
--   `tests/pantallas.rs`: render de cada pantalla sobre el backend de prueba de `ratatui`, incluida una terminal de 40x15.
+-   `tests/pantallas.rs`: render de cada pantalla sobre el backend de prueba de `ratatui`, incluida una terminal de 40x15, y que cada tramo se vea distinto.
+
+Entre ellos hay un descenso completo hasta el piso 48 que verifica que los 48 pisos se generen, que ninguno salga desierto y que los cuatro Guardianes aparezcan donde corresponde.
 
 ## 📚 Dependencias
 

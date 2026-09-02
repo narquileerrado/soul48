@@ -450,7 +450,8 @@ fn los_guardianes_cierran_su_tramo() {
     for piso in 1..=48u32 {
         assert_eq!(
             tramo::cierra_tramo(piso),
-            matches!(piso, 12 | 24 | 36 | 48),
+            // el 48 es del Archidemonio: el Guardián del Silencio cierra en el 42
+            matches!(piso, 12 | 24 | 36 | 42),
             "el piso {} no coincide con el fin de tramo",
             piso
         );

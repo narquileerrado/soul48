@@ -131,6 +131,9 @@ pub mod descenso {
     pub const PISO_FINAL: u32 = 48;
     /// Cada cuántos pisos aparece un jefe.
     pub const CADA_CUANTOS_JEFE: u32 = 6;
+    /// Criaturas mínimas por piso. Con la aparición librada al azar sala por
+    /// sala, uno de cada diez pisos salía completamente desierto.
+    pub const MINIMO_CRIATURAS: usize = 3;
 }
 
 /// Percepción y memoria.

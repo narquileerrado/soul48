@@ -10,6 +10,7 @@ pub mod fov;
 pub mod interaction;
 pub mod inventory;
 pub mod map;
+pub mod pathing;
 pub mod save;
 
 pub use save::SaveData;
@@ -22,7 +23,7 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 /// Representa el estado actual de la aplicación/juego.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -207,7 +208,7 @@ pub struct Avistamiento<'a> {
 pub struct App {
     /// El héroe entero: números, equipo y efectos.
     pub player: Player,
-    pub logs: Vec<LogMessage>,
+    pub logs: VecDeque<LogMessage>,
     pub map: Vec<Vec<char>>,
     pub visible: Vec<Vec<bool>>,
     pub explored: Vec<Vec<bool>>,
@@ -218,6 +219,8 @@ pub struct App {
     pub depth: u32,
 
     // Flags de mecánicas de flujo
+    /// El aceite del último paso te dejó resbalando.
+    pub resbalon_pendiente: bool,
     pub drop_mode: bool,
     pub show_descend_prompt: bool,
 
@@ -260,10 +263,10 @@ impl App {
 
         let mut app = App {
             player,
-            logs: vec![LogMessage {
+            logs: VecDeque::from([LogMessage {
                 text: format!("> NIVEL {} - SEED: {}", depth, seed),
                 l_type: LogType::Info,
-            }],
+            }]),
             map,
             visible: vec![vec![false; map_width]; map_height],
             explored: vec![vec![false; map_width]; map_height],
@@ -273,6 +276,7 @@ impl App {
             seed,
             depth,
 
+            resbalon_pendiente: false,
             drop_mode: false,
             show_descend_prompt: false,
 
@@ -411,7 +415,20 @@ impl App {
         if move_allowed {
             self.player.pos = new_pos;
             action_taken = true;
+
+            // el aceite te lleva un paso más en la misma dirección, si hay
+            // dónde: es lo que el historial venía prometiendo sin cumplir
+            if std::mem::take(&mut self.resbalon_pendiente) {
+                if let Some(mas_alla) = Self::offset_point(new_pos, dx, dy) {
+                    let libre = self.es_transitable(mas_alla)
+                        && !self.entities.iter().any(|e| e.pos == mas_alla);
+                    if libre {
+                        self.player.pos = mas_alla;
+                    }
+                }
+            }
         }
+        self.resbalon_pendiente = false;
 
         self.reap_dead();
         action_taken
@@ -471,9 +488,10 @@ impl App {
     /// interfaz (`settings.lineas_susurro`), y antes ese ajuste de pantalla
     /// borraba el historial de verdad y se llevaba puesto lo que iba al save.
     pub fn add_log(&mut self, text: String, l_type: LogType) {
-        self.logs.push(LogMessage { text, l_type });
+        self.logs.push_back(LogMessage { text, l_type });
+        // `Vec::remove(0)` corría los 200 mensajes de lugar en cada línea
         while self.logs.len() > balance::percepcion::TOPE_HISTORIAL {
-            self.logs.remove(0);
+            self.logs.pop_front();
         }
     }
 

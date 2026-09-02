@@ -202,53 +202,58 @@ impl MapBuilder {
 
         // Un jefe cada seis pisos. Los de fin de tramo llevan el nombre del
         // tramo y lo cierran; los intermedios son un eco más flojo. Antes eran
-        // nueve Guardianes con nombre autogenerado y ninguna identidad.
-        if depth == balance::descenso::PISO_FINAL && !rooms.is_empty() {
-            let boss_pos = rooms.last().unwrap().center();
-            entities.push(Entity {
-                pos: boss_pos,
-                glyph: 'D',
-                color: crate::theme::VIOLETA,
-                name: bestiary::ARCHIDEMONIO.into(),
-                e_type: EntityType::Mob {
-                    hp: 150,
-                    max_hp: 150,
-                    state: EnemyState::Aggressive,
-                    ai: EnemyAI::Melee,
-                    min_dmg: 8,
-                    max_dmg: 16,
-                    defense: 6,
-                    pacified: false,
-                },
-                status_effects: Vec::new(),
-            });
-        } else if depth.is_multiple_of(balance::descenso::CADA_CUANTOS_JEFE) && rooms.len() > 1 {
-            let boss_pos = rooms.last().unwrap().center();
-            let cierra = tramo::cierra_tramo(depth);
-            // el Guardián del tramo pega más fuerte que el eco de mitad
-            let escala = if cierra { 1.0 } else { 0.7 };
-            let vida = ((50 + depth as i32 * 3) as f32 * escala) as i32;
-            entities.push(Entity {
-                pos: boss_pos,
-                glyph: 'B',
-                color: crate::theme::ROJO_ALTAR,
-                name: if cierra {
-                    tramo.jefe.to_string()
-                } else {
-                    format!("Eco del {}", tramo.jefe)
-                },
-                e_type: EntityType::Mob {
-                    hp: vida,
-                    max_hp: vida,
-                    state: EnemyState::Aggressive,
-                    ai: EnemyAI::Melee,
-                    min_dmg: ((5 + depth as i32 / 2) as f32 * escala) as i32,
-                    max_dmg: ((10 + depth as i32 / 2) as f32 * escala) as i32,
-                    defense: 4 + (depth as i32 / 5),
-                    pacified: false,
-                },
-                status_effects: Vec::new(),
-            });
+        // nueve Guardianes en cada múltiplo de 5, todos con nombre
+        // autogenerado y las estadísticas calculadas acá mismo.
+        if depth.is_multiple_of(balance::descenso::CADA_CUANTOS_JEFE) && !rooms.is_empty() {
+            let cierra = depth == balance::descenso::PISO_FINAL || tramo::cierra_tramo(depth);
+            let nombre_ficha = if depth == balance::descenso::PISO_FINAL {
+                bestiary::ARCHIDEMONIO
+            } else {
+                tramo.jefe
+            };
+
+            // las estadísticas salen del Compendio, no de una fórmula aparte
+            if let Some(ficha) = bestiary::BESTIARIO
+                .iter()
+                .find(|e| e.short_name == nombre_ficha)
+            {
+                let escala = if cierra { 1.0 } else { 0.7 };
+                let vida = (ficha.base_hp as f32 * escala) as i32;
+                entities.push(Entity {
+                    pos: rooms.last().unwrap().center(),
+                    glyph: ficha.glyph,
+                    color: ficha.color,
+                    name: if cierra {
+                        ficha.short_name.to_string()
+                    } else {
+                        format!("Eco del {}", ficha.short_name)
+                    },
+                    e_type: EntityType::Mob {
+                        hp: vida,
+                        max_hp: vida,
+                        state: EnemyState::Aggressive,
+                        ai: ficha.ai.clone(),
+                        min_dmg: (ficha.base_damage.0 as f32 * escala) as i32,
+                        max_dmg: (ficha.base_damage.1 as f32 * escala) as i32,
+                        defense: (ficha.base_defense as f32 * escala) as i32,
+                        pacified: false,
+                    },
+                    status_effects: Vec::new(),
+                });
+            }
+        }
+
+        // Un piso sin una sola criatura es un paseo. La aparición sala por sala
+        // es probabilística y dejaba desierto a uno de cada diez, así que acá
+        // se completa el cupo repartiendo en las salas que haya.
+        let cuenta_mobs = |es: &[Entity]| {
+            es.iter()
+                .filter(|e| matches!(e.e_type, EntityType::Mob { .. }))
+                .count()
+        };
+        while cuenta_mobs(&entities) < balance::descenso::MINIMO_CRIATURAS && rooms.len() > 1 {
+            let sala = &rooms[rng.gen_range(1..rooms.len())];
+            entities.push(Self::spawn_random_enemy(&mut rng, sala.center(), depth));
         }
 
         // Colocación estratégica de cofres y llaves

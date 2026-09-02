@@ -4,8 +4,8 @@
 //! de lo que `MapBuilder` haya generado para una semilla determinada.
 
 use soul48::app::{
-    App, EnemyAI, EnemyState, Entity, EntityType, LogType, Point, ScrollType, StatusEffect,
-    StatusEffectType,
+    App, EnemyAI, EnemyState, Entity, EntityType, HazardType, LogType, Point, ScrollType,
+    StatusEffect, StatusEffectType,
 };
 use soul48::map_builder::MapBuilder;
 use soul48::theme;
@@ -685,4 +685,286 @@ fn la_serpiente_deja_su_marca() {
             .any(|e| e.effect_type == StatusEffectType::Poison),
         "la serpiente golpeó y no envenenó"
     );
+}
+
+/// Un enemigo detrás de una esquina tiene que doblarla.
+///
+/// Con el movimiento greedy anterior el mob elegía siempre el paso que más lo
+/// acercaba en línea recta, chocaba contra el muro y se quedaba vibrando ahí:
+/// pararse detrás de un recodo era invulnerabilidad gratis.
+#[test]
+fn el_enemigo_dobla_la_esquina() {
+    let mut app = App::arena(53);
+    let (hx, hy) = (app.player.pos.x, app.player.pos.y);
+
+    // un muro en L entre el héroe y el enemigo: la línea recta está cortada
+    for dy in 0..4 {
+        app.map[hy + dy][hx + 2] = '#';
+    }
+    let enemigo = Point::new(hx + 4, hy);
+    app.entities
+        .push(mob(enemigo, "Gnoll", 100, (1, 1), 0, EnemyAI::Melee));
+
+    // en pasos de rey: los mobs se mueven en ocho direcciones y la adyacencia
+    // para pegar cuenta las diagonales
+    let dist = |app: &App| -> usize {
+        let p = app.entities[0].pos;
+        (p.x as isize - app.player.pos.x as isize)
+            .abs()
+            .max((p.y as isize - app.player.pos.y as isize).abs()) as usize
+    };
+
+    let inicial = dist(&app);
+    let mut minima = inicial;
+    for _ in 0..25 {
+        app.process_enemy_turns();
+        minima = minima.min(dist(&app));
+    }
+
+    assert!(
+        minima < inicial,
+        "el enemigo nunca rodeó el muro: quedó a {} pasos, igual que al empezar",
+        minima
+    );
+    assert!(
+        minima <= 1,
+        "el enemigo rodeó a medias y se quedó a {} pasos",
+        minima
+    );
+}
+
+/// El cobarde huye de verdad, no se traba contra la pared de atrás.
+#[test]
+fn el_cobarde_se_aleja() {
+    let mut app = App::arena(59);
+    let al_lado = Point::new(app.player.pos.x + 1, app.player.pos.y);
+    app.entities
+        .push(mob(al_lado, "Ladrón", 100, (1, 1), 0, EnemyAI::Coward));
+
+    for _ in 0..6 {
+        app.process_enemy_turns();
+    }
+    let p = app.entities[0].pos;
+    let dist = (p.x as isize - app.player.pos.x as isize).abs()
+        + (p.y as isize - app.player.pos.y as isize).abs();
+    assert!(dist > 1, "el cobarde se quedó pegado al héroe");
+}
+
+/// Una puerta cerrada corta el camino igual que un muro.
+#[test]
+fn el_camino_no_atraviesa_puertas_cerradas() {
+    let mut app = App::arena(61);
+    let (hx, hy) = (app.player.pos.x, app.player.pos.y);
+
+    // pasillo de una casilla, tapado por una puerta cerrada
+    for y in 0..app.map.len() {
+        if y != hy {
+            app.map[y][hx + 2] = '#';
+        }
+    }
+    app.entities.push(objeto(
+        Point::new(hx + 2, hy),
+        "Puerta Cerrada con Llave",
+        EntityType::Door {
+            locked: true,
+            secret: false,
+            open: false,
+        },
+    ));
+
+    let campo = app.flow_field();
+    assert!(
+        campo.distancia(Point::new(hx + 4, hy)).is_none(),
+        "el camino atraviesa una puerta cerrada"
+    );
+}
+
+/// El aceite hace lo que anuncia: te lleva un paso de más.
+#[test]
+fn el_aceite_te_hace_resbalar() {
+    let mut app = App::arena(67);
+    let charco = Point::new(app.player.pos.x + 1, app.player.pos.y);
+    let mas_alla = Point::new(app.player.pos.x + 2, app.player.pos.y);
+    app.entities.push(objeto(
+        charco,
+        "Charco de Aceite",
+        EntityType::Hazard {
+            hazard_type: HazardType::Oil,
+        },
+    ));
+
+    app.try_move(1, 0);
+    assert_eq!(
+        app.player.pos, mas_alla,
+        "el aceite no arrastró: quedaste en {:?}",
+        app.player.pos
+    );
+}
+
+/// Con fuego al lado, el aceite prende en vez de resbalar.
+#[test]
+fn el_aceite_prende_si_hay_fuego_al_lado() {
+    let mut app = App::arena(71);
+    let charco = Point::new(app.player.pos.x + 1, app.player.pos.y);
+    app.entities.push(objeto(
+        charco,
+        "Charco de Aceite",
+        EntityType::Hazard {
+            hazard_type: HazardType::Oil,
+        },
+    ));
+    app.entities.push(objeto(
+        Point::new(charco.x + 1, charco.y),
+        "Fuego",
+        EntityType::Hazard {
+            hazard_type: HazardType::Fire,
+        },
+    ));
+
+    let hp = app.player.hp;
+    app.try_move(1, 0);
+    assert!(app.player.hp < hp, "el aceite no prendió con fuego al lado");
+    assert!(
+        app.player
+            .status_effects
+            .iter()
+            .any(|e| e.effect_type == StatusEffectType::Burn),
+        "prendió y no te quemó"
+    );
+}
+
+/// El pergamino de teletransporte no se gasta si no encuentra dónde dejarte.
+#[test]
+fn el_teletransporte_no_se_gasta_al_vacio() {
+    let mut app = App::arena(73);
+    // un piso sin una sola casilla de suelo: no hay destino posible
+    for fila in app.map.iter_mut() {
+        for casilla in fila.iter_mut() {
+            *casilla = '#';
+        }
+    }
+    app.inventory.push((
+        objeto(
+            Point::new(0, 0),
+            "Pergamino de Teletransporte",
+            EntityType::Scroll {
+                scroll_type: ScrollType::Teleport,
+            },
+        ),
+        1,
+    ));
+
+    app.use_item(0);
+    assert_eq!(
+        app.inventory.len(),
+        1,
+        "el pergamino se gastó sin teletransportar a nadie"
+    );
+}
+
+/// Los jefes tienen ficha, y la ficha dice lo que el jugador se cruza.
+#[test]
+fn los_jefes_estan_en_el_compendio() {
+    use soul48::bestiary::BESTIARIO;
+    use soul48::world::tramo::{self, TRAMOS};
+
+    for t in TRAMOS.iter() {
+        let ficha = BESTIARIO
+            .iter()
+            .find(|e| e.short_name == t.jefe)
+            .unwrap_or_else(|| panic!("«{}» no tiene ficha en el Compendio", t.jefe));
+        assert!(
+            ficha.spawn_weight.iter().all(|p| *p == 0),
+            "«{}» puede salir por spawn aleatorio",
+            t.jefe
+        );
+
+        // lo que genera el piso tiene que coincidir con lo que dice la ficha
+        let piso = tramo::piso_del_guardian(t);
+        let generado = MapBuilder::new(9001, piso)
+            .entities
+            .into_iter()
+            .find(|e| e.name == t.jefe)
+            .unwrap_or_else(|| panic!("el piso {} no puso a «{}»", piso, t.jefe));
+        if let EntityType::Mob { max_hp, .. } = generado.e_type {
+            assert_eq!(
+                max_hp, ficha.base_hp,
+                "«{}» aparece con {} de vida y el Compendio dice {}",
+                t.jefe, max_hp, ficha.base_hp
+            );
+        }
+    }
+}
+
+/// Una corrida completa hasta el piso 48, sin romper nada por el camino.
+///
+/// No juega bien: baja piso por piso hasta el final para verificar que la
+/// generación aguanta los 48 pisos, que cada tramo se puebla, que los cuatro
+/// Guardianes aparecen donde corresponde y que el Archidemonio espera abajo.
+#[test]
+fn el_descenso_completo_llega_hasta_el_archidemonio() {
+    use soul48::bestiary::ARCHIDEMONIO;
+    use soul48::world::tramo::{self, TRAMOS};
+
+    let mut app = App::new(Some(808), None, None, 1, None);
+    app.start_new_game();
+    // invulnerable: acá se prueba el mundo, no el combate
+    app.player.max_hp = 100_000;
+
+    let mut guardianes = Vec::new();
+    let mut vio_archidemonio = false;
+
+    while app.depth < 48 {
+        app.player.hp = app.player.max_hp;
+        let t = tramo::de_piso(app.depth);
+
+        assert!(
+            app.entities
+                .iter()
+                .any(|e| matches!(e.e_type, soul48::app::EntityType::Mob { .. })),
+            "el piso {} («{}») salió sin una sola criatura",
+            app.depth,
+            t.nombre
+        );
+        assert!(
+            app.es_transitable(app.player.pos),
+            "el piso {} te dejó dentro de un muro",
+            app.depth
+        );
+
+        for e in &app.entities {
+            if e.name == ARCHIDEMONIO {
+                vio_archidemonio = true;
+            }
+            if TRAMOS.iter().any(|t| t.jefe == e.name) {
+                guardianes.push((app.depth, e.name.clone()));
+            }
+        }
+        app.descend();
+    }
+
+    // el último piso: acá espera el final
+    assert!(
+        app.entities.iter().any(|e| e.name == ARCHIDEMONIO),
+        "el piso 48 no tiene Archidemonio"
+    );
+    assert!(
+        !vio_archidemonio,
+        "el Archidemonio apareció antes de tiempo"
+    );
+
+    assert_eq!(
+        guardianes.len(),
+        TRAMOS.len(),
+        "faltan Guardianes en el descenso: {:?}",
+        guardianes
+    );
+    for (piso, nombre) in &guardianes {
+        let t = tramo::de_piso(*piso);
+        assert_eq!(
+            &t.jefe, nombre,
+            "en el piso {} apareció «{}», que no es el Guardián de «{}»",
+            piso, nombre, t.nombre
+        );
+    }
 }

@@ -62,9 +62,13 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
         .split(principal[0]);
     let (columna_izq, columna_der) = (contenido[0], contenido[2]);
 
+    // La lista de criaturas pasó de cinco a dieciséis con los jefes: el bloque
+    // de entidades es el que tiene que crecer, y los glifos del mapa —que son
+    // siempre los mismos doce— van con alto fijo.
+    let alto_glifos = GLIFOS_MAPA.len() as u16 + 2;
     let izquierda = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(13), Constraint::Min(0)])
+        .constraints([Constraint::Min(8), Constraint::Length(alto_glifos)])
         .split(columna_izq);
 
     /* --- entidades --- */
@@ -78,11 +82,11 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
     let secciones = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(1), // separador CRIATURAS
+            Constraint::Min(3),    // la lista, que es la que se lleva el sobrante
             Constraint::Length(1),
-            Constraint::Length(5),
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Min(0),
+            Constraint::Length(1), // separador PRESENCIAS
+            Constraint::Length(2),
         ])
         .split(interior_entidades);
 

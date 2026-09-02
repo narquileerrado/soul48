@@ -102,7 +102,21 @@ pub fn indice_de_piso(depth: u32) -> usize {
         .unwrap_or(TRAMOS.len() - 1)
 }
 
-/// Si un piso es el último de su tramo, y por lo tanto lleva su Guardián.
+/// El piso en el que aparece el Guardián de un tramo.
+///
+/// Es el último piso con jefe del tramo que no sea el final del descenso: el
+/// piso 48 ya tiene dueño, así que el Guardián del Silencio se planta en el 42
+/// y te deja pasar sabiendo lo que sigue.
+pub fn piso_del_guardian(tramo: &Tramo) -> u32 {
+    let cada = crate::balance::descenso::CADA_CUANTOS_JEFE;
+    let mut piso = tramo.rango.1 - (tramo.rango.1 % cada);
+    if piso == crate::balance::descenso::PISO_FINAL {
+        piso -= cada;
+    }
+    piso
+}
+
+/// Si en este piso te espera el Guardián nombrado de su tramo.
 pub fn cierra_tramo(depth: u32) -> bool {
-    TRAMOS.iter().any(|t| t.rango.1 == depth)
+    TRAMOS.iter().any(|t| piso_del_guardian(t) == depth)
 }

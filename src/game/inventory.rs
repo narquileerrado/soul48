@@ -94,21 +94,32 @@ impl App {
                     // con `thread_rng` la semilla que muestra la interfaz
                     // dejaba de describir la partida
                     let (alto, ancho) = self.dimensiones();
+                    let mut destino = None;
                     for _ in 0..balance::objetos::INTENTOS_TELEPORT {
                         let rx = self.rng.gen_range(1..ancho - 1);
                         let ry = self.rng.gen_range(1..alto - 1);
                         if self.es_suelo(Point::new(rx, ry)) {
-                            self.player.pos = Point::new(rx, ry);
+                            destino = Some(Point::new(rx, ry));
+                            break;
+                        }
+                    }
+                    match destino {
+                        Some(p) => {
+                            self.player.pos = p;
                             self.add_log(
                                 "> TELETRANSPORTE: Te desvaneces y reapareces en otro lugar."
                                     .into(),
                                 LogType::Info,
                             );
                             self.calculate_fov();
-                            break;
+                            item_used = true;
                         }
+                        // antes el pergamino se gastaba igual y no pasaba nada
+                        None => self.add_log(
+                            "> El pergamino no encuentra dónde dejarte: sigue en tu mano.".into(),
+                            LogType::Warning,
+                        ),
                     }
-                    item_used = true;
                 }
                 ScrollType::Invisibility => {
                     self.player.invisible_turns = balance::objetos::TURNOS_INVISIBLE;
