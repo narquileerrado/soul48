@@ -1,33 +1,20 @@
-//! Menú principal: las Criptas.
+//! Menú principal.
+//!
+//! La pantalla es casi toda oscuridad, que es de lo que trata el juego: hueso y
+//! ceniza sobre penumbra, sin un solo borde, todo sobre un eje central. El oro
+//! aparece una única vez —la opción elegida— porque es lo que `theme` define
+//! que significa: foco, objetivo, selección. Al estar centrado, un marcador al
+//! costado rompería la simetría y el color ya alcanza para decir cuál es.
 
-use crate::arte;
 use crate::settings::{Glifos, Settings};
-use crate::sprite::Paleta;
 use crate::theme;
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    layout::{Alignment, Rect},
+    style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, ListState, Padding, Paragraph, Wrap},
+    widgets::{ListState, Paragraph},
     Frame,
 };
-
-const LOGO: &str = r#"
- @@@@@@    @@@@@@   @@@  @@@  @@@                       @@@    @@@@@@
-@@@@@@@   @@@@@@@@  @@@  @@@  @@@                      @@@@   @@@@@@@@
-!@@       @@!  @@@  @@!  @@@  @@!                     @@!@!   @@!  @@@
-!@!       !@!  @!@  !@!  @!@  !@!                    !@!!@!   !@!  @!@
-!!@@!!    @!@  !@!  @!@  !@!  @!!       @!@!@!@!@   @!! @!!    !@!!@!
- !!@!!!   !@!  !!!  !@!  !!!  !!!       !!!@!@!!!  !!!  !@!    !!@!!!
-     !:!  !!:  !!!  !!:  !!!  !!:                  :!!:!:!!:  !!:  !!!
-    !:!   :!:  !:!  :!:  !:!   :!:                 !:::!!:::  :!:  !:!
-:::: ::   ::::: ::  ::::: ::   :: ::::                  :::   ::::: ::
-:: : :     : :  :    : :  :   : :: : :                  :::    : :  :
-"#;
-
-pub const SUBTITLE: &str = "--- THE TALKING DEAD ---";
-
-pub const STORY_SUMMARY: &str = "Despiertas en el umbral, sin voz. No eres más que un eco de quien fuiste, un alma atada a un cuerpo que ya no respira. Cuarenta y ocho pisos más abajo, el Archidemonio del Silencio guarda lo que te arrebató y se burla de que no puedas nombrarlo. Para recuperar tu voz y tu destino, hay que bajar hasta él. Pero ten cuidado: en este dominio, hasta las paredes tienen algo que decir, y la muerte es solo el comienzo de una nueva conversación.";
 
 /// Datos mínimos de la partida guardada: piso, alma, alma máxima y semilla.
 pub type Fragmento = Option<(u32, i32, i32, u64)>;
@@ -42,10 +29,12 @@ pub enum MainMenuOption {
 }
 
 impl MainMenuOption {
+    /// El orden convencional: empezar, continuar, y recién después lo demás.
+    /// El índice del cursor entra por acá, así que reordenar esta lista alcanza.
     const ALL: [MainMenuOption; 5] = [
         MainMenuOption::StartGame,
-        MainMenuOption::Bestiary,
         MainMenuOption::LoadGame,
+        MainMenuOption::Bestiary,
         MainMenuOption::Options,
         MainMenuOption::Quit,
     ];
@@ -73,222 +62,184 @@ impl MainMenuOption {
     }
 }
 
+/* ─────────────────────────── el título ─────────────────────────── */
+
+/// Lo que dice el título, en el orden en que se dibuja.
+const TITULO: &str = "SOUL 48";
+/// Ancho de un glifo en pixeles, más el pixel de separación.
+const PASO_GLIFO: usize = 6;
+/// Lo que avanza un espacio.
+const PASO_ESPACIO: usize = 3;
+
+/// Tipografía de bloques de 5x7 pixeles para el título.
+///
+/// Reemplaza al logo FIGlet de `@ ! : .`, que dibujaba las letras con un
+/// degradado de caracteres y salía embarrado. Devuelve `None` para el espacio.
+fn glifo_titulo(c: char) -> Option<[&'static str; 7]> {
+    Some(match c {
+        'S' => [
+            "01110", "10001", "10000", "01110", "00001", "10001", "01110",
+        ],
+        'O' => [
+            "01110", "10001", "10001", "10001", "10001", "10001", "01110",
+        ],
+        'U' => [
+            "10001", "10001", "10001", "10001", "10001", "10001", "01110",
+        ],
+        'L' => [
+            "10000", "10000", "10000", "10000", "10000", "10000", "11111",
+        ],
+        '4' => [
+            "00010", "00110", "01010", "10010", "11111", "00010", "00010",
+        ],
+        '8' => [
+            "01110", "10001", "10001", "01110", "10001", "10001", "01110",
+        ],
+        _ => return None,
+    })
+}
+
+/// Dibuja el título en cuatro filas de terminal.
+///
+/// Cada celda pinta dos pixeles verticales con `▀` / `▄` / `█`: la misma técnica
+/// de medio bloque que `sprite` usa para los retratos, que deja los pixeles
+/// cuadrados en vez de estirados al doble de alto. En modo ascii cae a `#`, `'`
+/// y `.`, igual que `Sprite::lineas`.
+fn titulo_en_bloques(ascii: bool) -> Vec<Line<'static>> {
+    let ancho: usize = TITULO
+        .chars()
+        .map(|c| {
+            if glifo_titulo(c).is_some() {
+                PASO_GLIFO
+            } else {
+                PASO_ESPACIO
+            }
+        })
+        .sum::<usize>()
+        .saturating_sub(1);
+
+    // siete filas de letra más una en blanco: cuatro celdas justas
+    let mut pixeles = vec![vec![false; ancho]; 8];
+    let mut x = 0;
+    for c in TITULO.chars() {
+        match glifo_titulo(c) {
+            None => x += PASO_ESPACIO,
+            Some(glifo) => {
+                for (py, fila) in glifo.iter().enumerate() {
+                    for (px, bit) in fila.chars().enumerate() {
+                        if bit == '1' {
+                            pixeles[py][x + px] = true;
+                        }
+                    }
+                }
+                x += PASO_GLIFO;
+            }
+        }
+    }
+
+    let (lleno, arriba, abajo) = if ascii {
+        ('#', '\'', '.')
+    } else {
+        ('█', '▀', '▄')
+    };
+
+    (0..4)
+        .map(|celda| {
+            let texto: String = (0..ancho)
+                .map(
+                    |cx| match (pixeles[celda * 2][cx], pixeles[celda * 2 + 1][cx]) {
+                        (true, true) => lleno,
+                        (true, false) => arriba,
+                        (false, true) => abajo,
+                        (false, false) => ' ',
+                    },
+                )
+                .collect();
+            Line::from(Span::styled(texto, Style::default().fg(theme::HUESO)))
+        })
+        .collect()
+}
+
+/// Letterspacing a la manera de una terminal: separando con espacios.
+fn espaciado(texto: &str) -> String {
+    texto
+        .chars()
+        .map(|c| c.to_string())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn tenue(texto: String) -> Line<'static> {
+    Line::from(Span::styled(
+        texto,
+        Style::default().fg(theme::CENIZA_HONDA),
+    ))
+}
+
+fn aire(n: usize) -> Vec<Line<'static>> {
+    vec![Line::from(""); n]
+}
+
+/* ─────────────────────────── la pantalla ─────────────────────────── */
+
 pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajustes: &Settings) {
     let size = f.size();
     let seleccionado = menu_state.selected().unwrap_or(0);
+    let ascii = ajustes.glifos == Glifos::Ascii;
 
-    // marco global, apenas insinuado
-    f.render_widget(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme::CENIZA_HONDA)),
-        size,
-    );
+    // La composición vive de su aire. En una terminal baja se compacta antes de
+    // recortarse: perder el respiro es mejor que perder una línea.
+    let holgado = size.height >= 34;
+    let (respiro, entre_opciones) = if holgado { (5, 1) } else { (1, 0) };
 
-    let filas = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(1)
-        .constraints([
-            Constraint::Length(11), // logo
-            Constraint::Length(2),  // subtítulo
-            Constraint::Min(0),     // contenido
-            Constraint::Length(3),  // pie
-        ])
-        .split(size);
+    let mut lineas: Vec<Line> = Vec::new();
+    lineas.extend(titulo_en_bloques(ascii));
+    lineas.extend(aire(1));
+    lineas.push(tenue(espaciado("the talking dead")));
+    lineas.extend(aire(respiro));
 
-    // el logo sigue siendo azul: el título del juego es tu alma
-    f.render_widget(
-        Paragraph::new(LOGO).alignment(Alignment::Center).style(
-            Style::default()
-                .fg(theme::AZUL_ALMA)
-                .add_modifier(Modifier::BOLD),
-        ),
-        filas[0],
-    );
-    f.render_widget(
-        Paragraph::new(SUBTITLE).alignment(Alignment::Center).style(
-            Style::default()
-                .fg(theme::CENIZA)
-                .add_modifier(Modifier::ITALIC),
-        ),
-        filas[1],
-    );
-
-    let contenido = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(34), Constraint::Min(0)])
-        .horizontal_margin(2)
-        .split(filas[2]);
-
-    let izquierda = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(4)])
-        .split(contenido[0]);
-
-    /* --- criptas --- */
-    let bloque = Block::default()
-        .borders(Borders::ALL)
-        .title(Span::styled(
-            " CRIPTAS ",
-            Style::default().fg(theme::CENIZA),
-        ))
-        .border_style(Style::default().fg(theme::ORO_APAGADO));
-    let interior = bloque.inner(izquierda[0]);
-    f.render_widget(bloque, izquierda[0]);
-
-    let ancho = interior.width as usize;
-    let mut opciones: Vec<Line> = vec![Line::from("")];
-    for (i, opt) in MainMenuOption::all().iter().enumerate() {
-        if i == seleccionado {
-            let texto = format!(" > {}", opt.as_str());
-            let relleno = ancho.saturating_sub(texto.chars().count());
-            opciones.push(Line::from(Span::styled(
-                format!("{}{}", texto, " ".repeat(relleno)),
-                Style::default()
-                    .fg(theme::PENUMBRA)
-                    .bg(theme::ORO)
-                    .add_modifier(Modifier::BOLD),
-            )));
+    for (i, opcion) in MainMenuOption::all().iter().enumerate() {
+        let estilo = if i == seleccionado {
+            Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD)
         } else {
-            opciones.push(Line::from(Span::styled(
-                format!("   {}", opt.as_str()),
-                Style::default().fg(theme::HUESO),
-            )));
+            Style::default().fg(theme::CENIZA)
+        };
+        lineas.push(Line::from(Span::styled(opcion.as_str(), estilo)));
+        if i + 1 < MainMenuOption::all().len() {
+            lineas.extend(aire(entre_opciones));
         }
-        opciones.push(Line::from(""));
     }
-    f.render_widget(Paragraph::new(opciones), interior);
 
-    /* --- último fragmento: qué te espera si elegís RECOGER FRAGMENTOS --- */
-    let cuerpo_fragmento = match fragmento {
-        Some((piso, hp, max_hp, seed)) => {
-            let color_alma = if hp * 4 <= *max_hp {
-                theme::ROJO_ALTAR
-            } else {
-                theme::AZUL_ALMA
-            };
-            vec![
-                Line::from(vec![
-                    Span::styled(" PISO ", Style::default().fg(theme::CENIZA)),
-                    Span::styled(format!("{}", piso), Style::default().fg(theme::HUESO)),
-                    Span::styled("    ALMA ", Style::default().fg(theme::CENIZA)),
-                    Span::styled(
-                        format!("{}/{}", hp, max_hp),
-                        Style::default().fg(color_alma),
-                    ),
-                ]),
-                Line::from(vec![
-                    Span::styled(" SEMILLA ", Style::default().fg(theme::CENIZA)),
-                    Span::styled(
-                        format!("{}", seed),
-                        Style::default().fg(theme::CENIZA_HONDA),
-                    ),
-                ]),
-            ]
-        }
-        None => vec![Line::from(Span::styled(
-            " sin partida guardada",
-            Style::default().fg(theme::CENIZA_HONDA),
-        ))],
-    };
-    f.render_widget(
-        Paragraph::new(cuerpo_fragmento).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(Span::styled(
-                    " ÚLTIMO FRAGMENTO ",
-                    Style::default().fg(theme::CENIZA),
-                ))
-                .border_style(Style::default().fg(theme::ORO_APAGADO)),
-        ),
-        izquierda[1],
-    );
+    lineas.extend(aire(if holgado { 3 } else { 1 }));
+    let opcion = MainMenuOption::all()[seleccionado.min(MainMenuOption::all().len() - 1)];
+    lineas.push(tenue(opcion.description().to_string()));
+    lineas.extend(aire(if holgado { 2 } else { 1 }));
 
-    /* --- crónica --- */
-    let opcion = &MainMenuOption::all()[seleccionado];
-    let cronica = vec![
-        Line::from(Span::styled(
-            opcion.as_str(),
-            Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
+    lineas.push(match fragmento {
+        Some((piso, hp, max_hp, seed)) => tenue(format!(
+            "piso {}   ·   alma {}/{}   ·   semilla {}",
+            piso, hp, max_hp, seed
         )),
-        Line::from(Span::styled(
-            opcion.description(),
-            Style::default().fg(theme::HUESO),
-        )),
-        Line::from(""),
-        Line::from(Span::styled(
-            "───────────────",
-            Style::default().fg(theme::ORO_APAGADO),
-        )),
-        Line::from(Span::styled(
-            "EL RELATO DEL DIFUNTO",
-            Style::default().fg(theme::CENIZA),
-        )),
-        Line::from(""),
-        Line::from(Span::styled(
-            STORY_SUMMARY,
-            Style::default().fg(theme::HUESO),
-        )),
-    ];
+        None => tenue("sin partida guardada".into()),
+    });
 
-    let bloque_cronica = Block::default()
-        .borders(Borders::ALL)
-        .padding(Padding::horizontal(1))
-        .title(Span::styled(
-            " CRÓNICA ",
-            Style::default().fg(theme::CENIZA),
-        ))
-        .border_style(Style::default().fg(theme::ORO_APAGADO));
-    let interior_cronica = bloque_cronica.inner(contenido[1]);
-    f.render_widget(bloque_cronica, contenido[1]);
-
-    // la ilustración entra sólo si sobra lugar: recortar el relato para meter
-    // arte sería la decisión equivocada
-    let alto_arte = arte::PORTAL.alto_en_celdas() + 1;
-    let area_texto = if interior_cronica.height >= 16 + alto_arte {
-        let partes = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(alto_arte), Constraint::Min(0)])
-            .split(interior_cronica);
-        let paleta = Paleta::de(theme::MURO, theme::ORO);
-        let lineas = arte::PORTAL.lineas(&paleta, Color::Reset, ajustes.glifos == Glifos::Ascii);
-        f.render_widget(
-            Paragraph::new(lineas).alignment(Alignment::Center),
-            partes[0],
-        );
-        partes[1]
+    lineas.extend(aire(if holgado { 2 } else { 1 }));
+    let (flechas, enter) = if ascii {
+        ("^v", "ENTER")
     } else {
-        interior_cronica
+        ("↑↓", "⏎")
+    };
+    lineas.push(tenue(format!("{}        {}        esc", flechas, enter)));
+
+    // centrado vertical: lo que sobra se reparte arriba y abajo
+    let alto = lineas.len() as u16;
+    let arriba = size.height.saturating_sub(alto) / 2;
+    let zona = Rect {
+        x: size.x,
+        y: size.y + arriba,
+        width: size.width,
+        height: size.height.saturating_sub(arriba),
     };
 
-    f.render_widget(
-        Paragraph::new(cronica).wrap(Wrap { trim: true }),
-        area_texto,
-    );
-
-    /* --- pie --- */
-    let pie = vec![
-        Line::from(Span::styled(
-            concat!("Soul 48: The Talking Dead — v", env!("CARGO_PKG_VERSION")),
-            Style::default().fg(theme::CENIZA_HONDA),
-        )),
-        Line::from(vec![
-            Span::styled(
-                "↑↓",
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" navegar   ", Style::default().fg(theme::CENIZA_HONDA)),
-            Span::styled(
-                "ENTER",
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" confirmar   ", Style::default().fg(theme::CENIZA_HONDA)),
-            Span::styled(
-                "ESC",
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" salir", Style::default().fg(theme::CENIZA_HONDA)),
-        ]),
-    ];
-    f.render_widget(Paragraph::new(pie).alignment(Alignment::Center), filas[3]);
+    f.render_widget(Paragraph::new(lineas).alignment(Alignment::Center), zona);
 }

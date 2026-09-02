@@ -1,0 +1,56 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Pantalla de título" },
+    { "id": "page-2", "name": "Descartadas" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 890, "h": 790, "page": "page-1", "title": "Penumbra centrada" },
+    { "file": "PenumbraAscii.dc.html", "x": 1010, "y": 0, "w": 890, "h": 790, "page": "page-1", "title": "Penumbra centrada · GLIFOS en ascii" },
+    { "file": "Pozo.dc.html", "x": 0, "y": 0, "w": 890, "h": 790, "page": "page-2", "title": "El Pozo" },
+    { "file": "Fosforo.dc.html", "x": 1010, "y": 0, "w": 890, "h": 790, "page": "page-2", "title": "Fósforo" },
+    { "file": "PenumbraIzquierda.dc.html", "x": 2020, "y": 0, "w": 890, "h": 790, "page": "page-2", "title": "Penumbra al margen" }
+  ],
+  "annotations": [
+    {
+      "id": "nota-elegida",
+      "x": 0,
+      "y": -300,
+      "w": 890,
+      "page": "page-1",
+      "text": "PENUMBRA, CENTRADA\n\nMismo sistema que la versión al margen: casi monocromática —hueso y ceniza—, sin un solo borde, y aire de sobra. Ahora todo cae sobre un eje central.\n\nAl centrar, el marcador de selección sobra: una marca a la izquierda rompería la simetría que acabás de pedir. La opción elegida se distingue sólo por el color, y el color es oro, que es justo lo que theme.rs dice que significa: foco, objetivo, selección. Menos tinta, misma claridad.\n\nTodo esto lo dibuja ratatui tal cual: caracteres, un color por celda y negrita. Nada más."
+    },
+    {
+      "id": "nota-seleccion",
+      "x": 0,
+      "y": 850,
+      "w": 420,
+      "page": "page-1",
+      "text": "UNA DECISIÓN QUE PODÉS REVERTIR\n\nHoy el juego marca la opción elegida con una barra invertida —fondo oro, letra penumbra— a lo ancho del menú. Acá la reemplacé por texto en oro y negrita, sin barra.\n\nEs deliberado: la barra es el elemento más pesado de la pantalla y esta dirección va de sacar peso. Pero es menos visible de un vistazo. Si querés la barra de vuelta, es una línea."
+    },
+    {
+      "id": "nota-orden",
+      "x": 470,
+      "y": 850,
+      "w": 420,
+      "page": "page-1",
+      "text": "OTRA QUE SIGUE ABIERTA\n\nLa maqueta pone RECOGER FRAGMENTOS en segundo lugar y COMPENDIO DE SOMBRAS en tercero. En title.rs hoy están al revés.\n\nEl orden de acá es el convencional —empezar, continuar, y recién después lo demás—, pero es una propuesta, no un arreglo."
+    },
+    {
+      "id": "nota-ascii",
+      "x": 1010,
+      "y": -300,
+      "w": 420,
+      "page": "page-1",
+      "text": "El juego trae GLIFOS en ascii para fuentes sin caracteres de caja, así que toda pantalla tiene que sobrevivir ese ajuste.\n\nAcá los medios bloques del logo caen a # ' . igual que en Sprite::lineas, y las flechas del pie a ^v.\n\nEl resto de la pantalla no usa un solo carácter especial, así que aguanta entera. Sólo el logo pierde: si te molesta, conviene dibujar un segundo logo pensado para ascii en vez de degradar éste."
+    },
+    {
+      "id": "nota-descartadas",
+      "x": 0,
+      "y": -220,
+      "w": 890,
+      "page": "page-2",
+      "text": "Las dos direcciones que no elegiste, y la Penumbra original al margen —por si querés comparar el centrado contra la asimetría antes de cerrar."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}
