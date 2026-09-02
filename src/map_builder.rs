@@ -139,7 +139,7 @@ impl MapBuilder {
                             0 => Entity {
                                 pos: eq_pos,
                                 glyph: '[',
-                                color: Color::Gray,
+                                color: crate::theme::HUESO,
                                 name: "Cota de Malla".into(),
                                 e_type: EntityType::Armor { defense: 3 + depth as i32 },
                                 status_effects: Vec::new(),
@@ -147,7 +147,7 @@ impl MapBuilder {
                             1 => Entity {
                                 pos: eq_pos,
                                 glyph: '^',
-                                color: Color::Yellow,
+                                color: crate::theme::HUESO,
                                 name: "Yelmo de Hierro".into(),
                                 e_type: EntityType::Helmet { defense: 2 + depth as i32 },
                                 status_effects: Vec::new(),
@@ -155,7 +155,7 @@ impl MapBuilder {
                             2 => Entity {
                                 pos: eq_pos,
                                 glyph: '=',
-                                color: Color::Yellow,
+                                color: crate::theme::HUESO,
                                 name: "Anillo de Fuerza".into(),
                                 e_type: EntityType::Ring { stat_bonus: 2 },
                                 status_effects: Vec::new(),
@@ -163,7 +163,7 @@ impl MapBuilder {
                             _ => Entity {
                                 pos: eq_pos,
                                 glyph: '"',
-                                color: Color::LightCyan,
+                                color: crate::theme::VIOLETA,
                                 name: "Amuleto de Claridad".into(),
                                 e_type: EntityType::Amulet { sanity_bonus: 20 },
                                 status_effects: Vec::new(),
@@ -187,7 +187,7 @@ impl MapBuilder {
                         entities.push(Entity {
                             pos: scroll_pos,
                             glyph: '?',
-                            color: Color::LightCyan,
+                            color: crate::theme::VIOLETA,
                             name: s_name.to_string(),
                             e_type: EntityType::Scroll { scroll_type: s_type },
                             status_effects: Vec::new(),
@@ -204,7 +204,7 @@ impl MapBuilder {
             entities.push(Entity {
                 pos: boss_pos,
                 glyph: 'D',
-                color: Color::LightRed,
+                color: crate::theme::VIOLETA,
                 name: "ARCHIDEMONIO DEL SILENCIO".into(),
                 e_type: EntityType::Mob {
                     hp: 150,
@@ -223,7 +223,7 @@ impl MapBuilder {
             entities.push(Entity {
                 pos: boss_pos,
                 glyph: 'B',
-                color: Color::Rgb(255, 60, 60),
+                color: crate::theme::ROJO_ALTAR,
                 name: format!("Guardián del Piso {}", depth),
                 e_type: EntityType::Mob {
                     hp: 50 + (depth as i32 * 3),
@@ -245,7 +245,7 @@ impl MapBuilder {
             entities.push(Entity {
                 pos: chest_pos,
                 glyph: 'C',
-                color: Color::Yellow,
+                color: crate::theme::COFRE,
                 name: "Cofre de Madera".into(),
                 e_type: EntityType::Chest { locked: true },
                 status_effects: Vec::new(),
@@ -270,7 +270,13 @@ impl MapBuilder {
                 entities.push(Entity {
                     pos: door_pos,
                     glyph: if is_secret { '║' } else if is_locked { '+' } else { '+' },
-                    color: if is_locked { Color::Red } else { Color::Rgb(160, 100, 40) },
+                    color: if is_secret {
+                        crate::theme::MURO
+                    } else if is_locked {
+                        crate::theme::ORO
+                    } else {
+                        crate::theme::CENIZA
+                    },
                     name: if is_secret { "Muro Sospechoso".into() } else if is_locked { "Puerta Cerrada con Llave".into() } else { "Puerta de Madera".into() },
                     e_type: EntityType::Door {
                         locked: is_locked,
@@ -288,10 +294,10 @@ impl MapBuilder {
                 let h_pos = Point::new(room.x1 + 1, room.y1 + 1);
                 if map[h_pos.y][h_pos.x] == '.' {
                     let (h_type, glyph, color, name) = match rng.gen_range(0..4) {
-                        0 => (HazardType::Spikes, '^', Color::DarkGray, "Trampa de Pinchos"),
-                        1 => (HazardType::Acid, '~', Color::Green, "Pozo de Ácido"),
-                        2 => (HazardType::Oil, 'o', Color::Rgb(100, 100, 50), "Charco de Aceite"),
-                        _ => (HazardType::Fire, '&', Color::Red, "Fuego"),
+                        0 => (HazardType::Spikes, '^', crate::theme::AMBAR, "Trampa de Pinchos"),
+                        1 => (HazardType::Acid, '~', crate::theme::AMBAR, "Pozo de Ácido"),
+                        2 => (HazardType::Oil, 'o', crate::theme::AMBAR, "Charco de Aceite"),
+                        _ => (HazardType::Fire, '&', crate::theme::AMBAR, "Fuego"),
                     };
                     entities.push(Entity {
                         pos: h_pos,
@@ -317,7 +323,7 @@ impl MapBuilder {
             entities.push(Entity {
                 pos: marker_pos,
                 glyph: 'R',
-                color: Color::Rgb(255, 215, 0),
+                color: crate::theme::ORO,
                 name: "Marca de Sala Especial".into(),
                 e_type: EntityType::SpecialRoomMarker { room_type },
                 status_effects: Vec::new(),
@@ -421,7 +427,7 @@ impl MapBuilder {
             EnemyTemplate {
                 name: "Cofre Sospechoso",
                 glyph: 'C',
-                color: Color::Yellow,
+                color: crate::theme::COFRE,
                 hp: 45,
                 defense: 5,
                 damage: (6, 12),

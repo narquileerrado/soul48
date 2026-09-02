@@ -822,7 +822,7 @@ impl App {
                         Entity {
                             pos: Point::new(0, 0),
                             glyph: '[',
-                            color: Color::Gray,
+                            color: crate::theme::HUESO,
                             name: old_a.0.clone(),
                             e_type: EntityType::Armor { defense: old_a.1 },
                             status_effects: Vec::new(),
@@ -840,7 +840,7 @@ impl App {
                         Entity {
                             pos: Point::new(0, 0),
                             glyph: '^',
-                            color: Color::Yellow,
+                            color: crate::theme::HUESO,
                             name: old_h.0.clone(),
                             e_type: EntityType::Helmet { defense: old_h.1 },
                             status_effects: Vec::new(),
@@ -858,7 +858,7 @@ impl App {
                         Entity {
                             pos: Point::new(0, 0),
                             glyph: '=',
-                            color: Color::Yellow,
+                            color: crate::theme::HUESO,
                             name: old_r.0.clone(),
                             e_type: EntityType::Ring { stat_bonus: old_r.1 },
                             status_effects: Vec::new(),
@@ -876,7 +876,7 @@ impl App {
                         Entity {
                             pos: Point::new(0, 0),
                             glyph: '"',
-                            color: Color::LightCyan,
+                            color: crate::theme::VIOLETA,
                             name: old_am.0.clone(),
                             e_type: EntityType::Amulet { sanity_bonus: old_am.1 },
                             status_effects: Vec::new(),

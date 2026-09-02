@@ -901,17 +901,19 @@ pub fn game_over_ui(f: &mut Frame, app: &App) {
 
 /* ───────────────────────────── compendio ───────────────────────────── */
 
-const GLIFOS_MAPA: [(char, Color, &str); 10] = [
+const GLIFOS_MAPA: [(char, Color, &str); 12] = [
     ('@', theme::AZUL_ALMA, "vos"),
     ('#', theme::MURO, "muro"),
     ('·', theme::SUELO, "suelo"),
     ('>', theme::ORO, "escaleras"),
+    ('+', theme::CENIZA, "puerta"),
     ('W', theme::VIOLETA, "pared parlante"),
     ('A', theme::ROJO_ALTAR, "altar de ecos"),
-    ('C', Color::Rgb(196, 160, 0), "cofre o mímico"),
-    ('k', theme::HUESO, "llave"),
-    ('!', theme::HUESO, "poción"),
     ('?', theme::VIOLETA, "pergamino"),
+    ('C', theme::COFRE, "cofre o mímico"),
+    ('^', theme::AMBAR, "trampa o yelmo"),
+    ('!', theme::HUESO, "poción"),
+    ('k', theme::HUESO, "llave"),
 ];
 
 /// Renderiza el Compendio: criaturas, presencias y el alfabeto del mapa.
@@ -947,7 +949,7 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
 
     let izquierda = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(16), Constraint::Min(0)])
+        .constraints([Constraint::Length(13), Constraint::Min(0)])
         .split(columna_izq);
 
     /* --- entidades --- */

@@ -71,7 +71,7 @@ pub fn get_bestiary() -> Vec<BestiaryEntry> {
             taxonomy: "Reino: Desconocido | Filo: Amorphobionta | Clase: Pseudopoda | Orden: Insidiosa",
             description: "No es un cofre, sino una lengua que espera. Una forma de vida parásita que imita objetos de valor para atraer a los incautos. Su 'madera' es en realidad piel endurecida, y sus 'bisagras' son mandíbulas capaces de triturar el acero más templado.",
             glyph: 'C',
-            color: Color::Rgb(196, 160, 0),
+            color: crate::theme::COFRE,
             base_hp: 45,
             base_damage: (6, 12),
             base_defense: 5,

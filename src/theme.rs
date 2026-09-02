@@ -23,6 +23,9 @@ pub const CENIZA_HONDA: Color = Color::Rgb(74, 69, 62);
 pub const MURO: Color = Color::Rgb(111, 106, 97);
 pub const SUELO: Color = Color::Rgb(58, 53, 47);
 pub const PENUMBRA: Color = Color::Rgb(14, 12, 11);
+/// Dorado de tesoro: cofres y mímicos. Más apagado que el oro del cromo,
+/// que está reservado a lo que la interfaz quiere que mires.
+pub const COFRE: Color = Color::Rgb(196, 160, 0);
 
 /// Mezcla un color hacia la penumbra.
 ///
