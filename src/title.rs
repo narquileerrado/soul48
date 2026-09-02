@@ -1,15 +1,9 @@
-//! Menú principal: las Criptas.
-
-use crate::arte;
-use crate::settings::{Glifos, Settings};
-use crate::sprite::Paleta;
-use crate::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, ListState, Padding, Paragraph, Wrap},
-    Frame,
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap},
+    Frame, // <-- ¡Aquí está la pieza que faltaba!
 };
 
 const LOGO: &str = r#"
@@ -28,9 +22,6 @@ const LOGO: &str = r#"
 pub const SUBTITLE: &str = "--- THE TALKING DEAD ---";
 
 pub const STORY_SUMMARY: &str = "Despiertas en la penumbra del piso 48. No eres más que un eco de quien fuiste, un alma atada a un cuerpo que ya no respira. El demonio que te arrebató la vida te observa desde las profundidades, burlándose de tu silencio. Para recuperar tu voz y tu destino, debes ascender. Pero ten cuidado: en este dominio, hasta las paredes tienen algo que decir, y la muerte es solo el comienzo de una nueva conversación.";
-
-/// Datos mínimos de la partida guardada: piso, alma, alma máxima y semilla.
-pub type Fragmento = Option<(u32, i32, i32, u64)>;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum MainMenuOption {
@@ -67,236 +58,131 @@ impl MainMenuOption {
             MainMenuOption::StartGame => "Inicia tu ascenso desde el piso 1. Recupera tu alma.",
             MainMenuOption::Bestiary => "Estudia a los moradores de las profundidades.",
             MainMenuOption::LoadGame => "Continúa una partida guardada anteriormente.",
-            MainMenuOption::Options => "Sintoniza la penumbra, los glifos y el guardado.",
+            MainMenuOption::Options => "Ajusta la configuración de audio y controles.",
             MainMenuOption::Quit => "Abandona el juego y regresa al sistema.",
         }
     }
 }
 
-pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajustes: &Settings) {
+pub fn ui(f: &mut Frame, menu_state: &mut ListState) {
     let size = f.size();
-    let seleccionado = menu_state.selected().unwrap_or(0);
+    let soul_blue = Color::Rgb(100, 200, 255);
+    let ghost_gray = Color::Rgb(150, 150, 150);
+    let ui_style = Style::default().fg(soul_blue);
 
-    // marco global, apenas insinuado
-    f.render_widget(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme::CENIZA_HONDA)),
-        size,
-    );
+    // 1. Marco Global sutil
+    let outer_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Rgb(50, 50, 50)));
+    f.render_widget(outer_block, size);
 
-    let filas = Layout::default()
+    // Layout principal: Logo (arriba) y Contenido (abajo)
+    let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .margin(1)
+        .margin(1) // Margen para no pisar el marco global
         .constraints([
-            Constraint::Length(11), // logo
-            Constraint::Length(2),  // subtítulo
-            Constraint::Min(0),     // contenido
-            Constraint::Length(3),  // pie
+            Constraint::Length(12), // Espacio para el logo
+            Constraint::Length(2),  // Subtítulo
+            Constraint::Min(0),     // Contenido dinámico
+            Constraint::Length(3),  // Footer
         ])
         .split(size);
 
-    // el logo sigue siendo azul: el título del juego es tu alma
-    f.render_widget(
-        Paragraph::new(LOGO).alignment(Alignment::Center).style(
-            Style::default()
-                .fg(theme::AZUL_ALMA)
-                .add_modifier(Modifier::BOLD),
-        ),
-        filas[0],
-    );
-    f.render_widget(
-        Paragraph::new(SUBTITLE).alignment(Alignment::Center).style(
-            Style::default()
-                .fg(theme::CENIZA)
-                .add_modifier(Modifier::ITALIC),
-        ),
-        filas[1],
-    );
+    // 1. Dibujar Logo
+    let logo_paragraph = Paragraph::new(LOGO)
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(soul_blue).add_modifier(Modifier::BOLD));
+    f.render_widget(logo_paragraph, chunks[0]);
 
-    let contenido = Layout::default()
+    // 2. Dibujar Subtítulo
+    let subtitle = Paragraph::new(SUBTITLE).alignment(Alignment::Center).style(
+        Style::default()
+            .fg(ghost_gray)
+            .add_modifier(Modifier::ITALIC),
+    );
+    f.render_widget(subtitle, chunks[1]);
+
+    // 3. Layout de Contenido (2 columnas)
+    let content_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(34), Constraint::Min(0)])
-        .horizontal_margin(2)
-        .split(filas[2]);
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+        .margin(2)
+        .split(chunks[2]);
 
-    let izquierda = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(4)])
-        .split(contenido[0]);
+    // Columna Izquierda: Menú
+    let options = MainMenuOption::all();
+    let list_items: Vec<ListItem> = options
+        .iter()
+        .map(|opt| ListItem::new(format!("  {}", opt.as_str())))
+        .collect();
 
-    /* --- criptas --- */
-    let bloque = Block::default()
-        .borders(Borders::ALL)
-        .title(Span::styled(
-            " CRIPTAS ",
-            Style::default().fg(theme::CENIZA),
-        ))
-        .border_style(Style::default().fg(theme::ORO_APAGADO));
-    let interior = bloque.inner(izquierda[0]);
-    f.render_widget(bloque, izquierda[0]);
-
-    let ancho = interior.width as usize;
-    let mut opciones: Vec<Line> = vec![Line::from("")];
-    for (i, opt) in MainMenuOption::all().iter().enumerate() {
-        if i == seleccionado {
-            let texto = format!(" > {}", opt.as_str());
-            let relleno = ancho.saturating_sub(texto.chars().count());
-            opciones.push(Line::from(Span::styled(
-                format!("{}{}", texto, " ".repeat(relleno)),
-                Style::default()
-                    .fg(theme::PENUMBRA)
-                    .bg(theme::ORO)
-                    .add_modifier(Modifier::BOLD),
-            )));
-        } else {
-            opciones.push(Line::from(Span::styled(
-                format!("   {}", opt.as_str()),
-                Style::default().fg(theme::HUESO),
-            )));
-        }
-        opciones.push(Line::from(""));
-    }
-    f.render_widget(Paragraph::new(opciones), interior);
-
-    /* --- último fragmento: qué te espera si elegís RECOGER FRAGMENTOS --- */
-    let cuerpo_fragmento = match fragmento {
-        Some((piso, hp, max_hp, seed)) => {
-            let color_alma = if hp * 4 <= *max_hp {
-                theme::ROJO_ALTAR
-            } else {
-                theme::AZUL_ALMA
-            };
-            vec![
-                Line::from(vec![
-                    Span::styled(" PISO ", Style::default().fg(theme::CENIZA)),
-                    Span::styled(format!("{}", piso), Style::default().fg(theme::HUESO)),
-                    Span::styled("    ALMA ", Style::default().fg(theme::CENIZA)),
-                    Span::styled(
-                        format!("{}/{}", hp, max_hp),
-                        Style::default().fg(color_alma),
-                    ),
-                ]),
-                Line::from(vec![
-                    Span::styled(" SEMILLA ", Style::default().fg(theme::CENIZA)),
-                    Span::styled(
-                        format!("{}", seed),
-                        Style::default().fg(theme::CENIZA_HONDA),
-                    ),
-                ]),
-            ]
-        }
-        None => vec![Line::from(Span::styled(
-            " sin partida guardada",
-            Style::default().fg(theme::CENIZA_HONDA),
-        ))],
-    };
-    f.render_widget(
-        Paragraph::new(cuerpo_fragmento).block(
+    let menu_list = List::new(list_items)
+        .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(Span::styled(
-                    " ÚLTIMO FRAGMENTO ",
-                    Style::default().fg(theme::CENIZA),
-                ))
-                .border_style(Style::default().fg(theme::ORO_APAGADO)),
-        ),
-        izquierda[1],
-    );
+                .title(" CRIPTAS ")
+                .border_style(ui_style),
+        )
+        .highlight_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::REVERSED), // Efecto de iluminación
+        )
+        .highlight_symbol(" > ");
+    f.render_widget(menu_list, content_chunks[0]);
 
-    /* --- crónica --- */
-    let opcion = &MainMenuOption::all()[seleccionado];
-    let cronica = vec![
+    // Columna Derecha: Lore e Info
+    let selected_index = menu_state.selected().unwrap_or(0);
+    let selected_option = &options[selected_index];
+
+    let info_text = vec![
+        Line::from(""),
         Line::from(Span::styled(
-            opcion.as_str(),
-            Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
+            " DESTINO SELECCIONADO:",
+            Style::default().fg(ghost_gray),
         )),
         Line::from(Span::styled(
-            opcion.description(),
-            Style::default().fg(theme::HUESO),
+            format!(" {}", selected_option.description()),
+            Style::default().fg(Color::White),
         )),
         Line::from(""),
         Line::from(Span::styled(
-            "───────────────",
-            Style::default().fg(theme::ORO_APAGADO),
+            " ───────────────",
+            Style::default().fg(soul_blue),
         )),
         Line::from(""),
         Line::from(Span::styled(
-            "EL RELATO DEL DIFUNTO",
-            Style::default().fg(theme::CENIZA),
+            " EL RELATO DEL DIFUNTO:",
+            Style::default().fg(ghost_gray),
         )),
-        Line::from(""),
         Line::from(Span::styled(
             STORY_SUMMARY,
-            Style::default().fg(theme::HUESO),
+            Style::default().fg(Color::White),
         )),
     ];
 
-    let bloque_cronica = Block::default()
-        .borders(Borders::ALL)
-        .padding(Padding::horizontal(1))
-        .title(Span::styled(
-            " CRÓNICA ",
-            Style::default().fg(theme::CENIZA),
-        ))
-        .border_style(Style::default().fg(theme::ORO_APAGADO));
-    let interior_cronica = bloque_cronica.inner(contenido[1]);
-    f.render_widget(bloque_cronica, contenido[1]);
+    let info_paragraph = Paragraph::new(info_text)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" CRÓNICA ")
+                .border_style(ui_style),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(info_paragraph, content_chunks[1]);
 
-    // la ilustración entra sólo si sobra lugar: recortar el relato para meter
-    // arte sería la decisión equivocada
-    let alto_arte = arte::PORTAL.alto_en_celdas() + 1;
-    let area_texto = if interior_cronica.height >= 16 + alto_arte {
-        let partes = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(alto_arte), Constraint::Min(0)])
-            .split(interior_cronica);
-        let paleta = Paleta::de(theme::MURO, theme::ORO);
-        let lineas = arte::PORTAL.lineas(
-            &paleta,
-            Color::Reset,
-            ajustes.glifos == Glifos::Ascii,
-        );
-        f.render_widget(
-            Paragraph::new(lineas).alignment(Alignment::Center),
-            partes[0],
-        );
-        partes[1]
-    } else {
-        interior_cronica
-    };
-
-    f.render_widget(
-        Paragraph::new(cronica).wrap(Wrap { trim: true }),
-        area_texto,
-    );
-
-    /* --- pie --- */
-    let pie = vec![
+    // 4. Footer
+    let footer_text = vec![
         Line::from(Span::styled(
-            "Soul 48: The Talking Dead — v0.2.0",
-            Style::default().fg(theme::CENIZA_HONDA),
+            "Soul 48: The Talking Dead - v0.2.0",
+            Style::default().fg(Color::DarkGray),
         )),
-        Line::from(vec![
-            Span::styled(
-                "↑↓",
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" navegar   ", Style::default().fg(theme::CENIZA_HONDA)),
-            Span::styled(
-                "ENTER",
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" confirmar   ", Style::default().fg(theme::CENIZA_HONDA)),
-            Span::styled(
-                "ESC",
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" salir", Style::default().fg(theme::CENIZA_HONDA)),
-        ]),
+        Line::from(Span::styled(
+            "[ARRIBA/ABAJO] Navegar  [ENTER] Confirmar  [ESC/Q] Salir",
+            ui_style,
+        )),
     ];
-    f.render_widget(
-        Paragraph::new(pie).alignment(Alignment::Center),
-        filas[3],
-    );
+    let footer = Paragraph::new(footer_text).alignment(Alignment::Center);
+    f.render_widget(footer, chunks[3]);
 }
