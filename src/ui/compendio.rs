@@ -175,7 +175,7 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
     f.render_widget(bloque_cronica, columna_der);
 
     // banda de retrato: el sprite a la izquierda, la ficha de la criatura al lado
-    let retrato = arte::de_criatura(e.glyph);
+    let retrato = arte::de_criatura(e.short_name);
     let alto_banda = retrato.map(|s| s.alto_en_celdas()).unwrap_or(0);
     let con_retrato = retrato.is_some() && interior_cronica.height >= 20 + alto_banda;
 

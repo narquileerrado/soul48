@@ -18,7 +18,11 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
-use std::{error::Error, io, time::Duration};
+use std::{
+    error::Error,
+    io,
+    time::{Duration, Instant},
+};
 
 /// Dónde queda el fragmento de alma entre partidas.
 const RUTA_PARTIDA: &str = "savegame.json";
@@ -29,6 +33,12 @@ const RUTA_PARTIDA: &str = "savegame.json";
 /// esperar bloqueado es lo correcto. Antes el bucle redibujaba la pantalla
 /// entera cada 16 ms aunque no pasara nada.
 const ESPERA_EVENTO: Duration = Duration::from_millis(250);
+
+/// Cada cuánto avanza un carácter la cinta del relato del título.
+///
+/// Es lo único del juego que se mueve solo, así que sólo la pantalla de título
+/// se redibuja sin que pase nada; el resto sigue esperando un evento.
+const PASO_CINTA: Duration = Duration::from_millis(110);
 
 fn main() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
@@ -57,13 +67,22 @@ fn correr<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<()
     // qué te espera si elegís RECOGER FRAGMENTOS
     let mut fragmento = App::peek_save(RUTA_PARTIDA);
     let mut redibujar = true;
+    let comienzo = Instant::now();
 
     loop {
         if redibujar {
+            let desplazamiento = (comienzo.elapsed().as_millis() / PASO_CINTA.as_millis()) as usize;
             match app.state {
                 GameState::TitleScreen => {
-                    terminal
-                        .draw(|f| title::ui(f, &mut menus.titulo, &fragmento, &app.settings))?;
+                    terminal.draw(|f| {
+                        title::ui(
+                            f,
+                            &mut menus.titulo,
+                            &fragmento,
+                            &app.settings,
+                            desplazamiento,
+                        )
+                    })?;
                 }
                 GameState::Playing => {
                     terminal.draw(|f| ui(f, &app))?;
@@ -84,7 +103,11 @@ fn correr<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<()
             redibujar = false;
         }
 
-        if !event::poll(ESPERA_EVENTO)? {
+        // en el título la cinta corre sola; en el resto no hay nada que animar
+        let en_titulo = app.state == GameState::TitleScreen;
+        let espera = if en_titulo { PASO_CINTA } else { ESPERA_EVENTO };
+        if !event::poll(espera)? {
+            redibujar = en_titulo;
             continue;
         }
 

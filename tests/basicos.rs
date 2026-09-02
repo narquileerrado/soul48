@@ -457,3 +457,61 @@ fn los_guardianes_cierran_su_tramo() {
         );
     }
 }
+
+/* ───────────────────────────── los retratos ───────────────────────────── */
+
+/// Toda criatura del Compendio tiene que tener su retrato.
+///
+/// `arte::de_criatura` devuelve `Option` y el Compendio cae al formato sin
+/// retrato, así que una ficha sin dibujo no rompe nada: se degrada en silencio.
+#[test]
+fn ninguna_criatura_se_queda_sin_retrato() {
+    use soul48::arte;
+    use soul48::bestiary::BESTIARIO;
+
+    let sin: Vec<&str> = BESTIARIO
+        .iter()
+        .filter(|e| arte::de_criatura(e.short_name).is_none())
+        .map(|e| e.short_name)
+        .collect();
+    assert!(sin.is_empty(), "sin retrato: {:?}", sin);
+}
+
+/// Cada criatura tiene el suyo: los cuatro Guardianes comparten la `B` en el
+/// mapa, así que buscarlos por glifo les daba el mismo dibujo a todos.
+#[test]
+fn cada_criatura_tiene_su_propio_retrato() {
+    use soul48::arte;
+    use soul48::bestiary::BESTIARIO;
+
+    let mut vistos: Vec<(*const _, &str)> = Vec::new();
+    for e in BESTIARIO.iter() {
+        let sprite = arte::de_criatura(e.short_name).expect("sin retrato");
+        let puntero = sprite as *const _;
+        if let Some((_, otro)) = vistos.iter().find(|(p, _)| *p == puntero) {
+            panic!("«{}» y «{}» comparten retrato", e.short_name, otro);
+        }
+        vistos.push((puntero, e.short_name));
+    }
+}
+
+/// El arte es texto: mientras las filas midan lo mismo, cualquier dibujo entra.
+/// Una fila corta deja un agujero transparente que nadie ve hasta abrir la ficha.
+#[test]
+fn los_retratos_son_rectangulares() {
+    use soul48::arte;
+    use soul48::bestiary::BESTIARIO;
+
+    for e in BESTIARIO.iter() {
+        let sprite = arte::de_criatura(e.short_name).expect("sin retrato");
+        let anchos: std::collections::HashSet<usize> =
+            sprite.arte.iter().map(|f| f.chars().count()).collect();
+        assert_eq!(
+            anchos.len(),
+            1,
+            "el retrato de «{}» tiene filas de distinto largo: {:?}",
+            e.short_name,
+            anchos
+        );
+    }
+}

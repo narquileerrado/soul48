@@ -16,6 +16,17 @@ use ratatui::{
     Frame,
 };
 
+/// El relato del difunto. Ya no cabe como bloque en la pantalla nueva, así que
+/// pasa rodando bajo el título: se lee entero si te quedás, y no le quita lugar
+/// al menú si no.
+pub const STORY_SUMMARY: &str = "Despiertas en el umbral, sin voz. No eres más que un eco de quien fuiste, un alma atada a un cuerpo que ya no respira. Cuarenta y ocho pisos más abajo, el Archidemonio del Silencio guarda lo que te arrebató y se burla de que no puedas nombrarlo. Para recuperar tu voz y tu destino, hay que bajar hasta él. Pero ten cuidado: en este dominio, hasta las paredes tienen algo que decir, y la muerte es solo el comienzo de una nueva conversación.";
+
+/// Ancho de la cinta del relato, en celdas.
+const ANCHO_CINTA: usize = 56;
+/// Aire entre el final del relato y su propio comienzo, para que el bucle no
+/// se lea como un corte. Con esto y el largo del relato sale el ciclo entero.
+pub const PAUSA_CINTA: usize = 14;
+
 /// Datos mínimos de la partida guardada: piso, alma, alma máxima y semilla.
 pub type Fragmento = Option<(u32, i32, i32, u64)>;
 
@@ -180,9 +191,30 @@ fn aire(n: usize) -> Vec<Line<'static>> {
     vec![Line::from(""); n]
 }
 
+/// La ventana del relato que toca mostrar, corrida `desplazamiento` caracteres.
+///
+/// La cinta es circular: al llegar al final vuelve a empezar, con una pausa en
+/// blanco en el medio. El ancho es fijo para que la línea no baile de tamaño y
+/// el centrado la deje siempre en el mismo lugar.
+fn cinta_del_relato(ancho: usize, desplazamiento: usize) -> String {
+    let cinta: Vec<char> = STORY_SUMMARY
+        .chars()
+        .chain(std::iter::repeat_n(' ', PAUSA_CINTA))
+        .collect();
+    (0..ancho)
+        .map(|i| cinta[(desplazamiento + i) % cinta.len()])
+        .collect()
+}
+
 /* ─────────────────────────── la pantalla ─────────────────────────── */
 
-pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajustes: &Settings) {
+pub fn ui(
+    f: &mut Frame,
+    menu_state: &mut ListState,
+    fragmento: &Fragmento,
+    ajustes: &Settings,
+    desplazamiento: usize,
+) {
     let size = f.size();
     let seleccionado = menu_state.selected().unwrap_or(0);
     let ascii = ajustes.glifos == Glifos::Ascii;
@@ -196,6 +228,8 @@ pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajus
     lineas.extend(titulo_en_bloques(ascii));
     lineas.extend(aire(1));
     lineas.push(tenue(espaciado("the talking dead")));
+    let ancho_cinta = ANCHO_CINTA.min((size.width as usize).saturating_sub(4));
+    lineas.push(tenue(cinta_del_relato(ancho_cinta, desplazamiento)));
     lineas.extend(aire(respiro));
 
     for (i, opcion) in MainMenuOption::all().iter().enumerate() {

@@ -87,7 +87,7 @@ fn las_pantallas_aguantan_una_terminal_chica() {
         let mut app = partida();
 
         terminal
-            .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings))
+            .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings, 0))
             .unwrap();
         terminal.draw(|f| ui(f, &app)).unwrap();
         terminal.draw(|f| game_over_ui(f, &app)).unwrap();
@@ -198,7 +198,7 @@ fn el_menu_principal_anuncia_el_ultimo_fragmento() {
     let app = partida();
 
     terminal
-        .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings))
+        .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings, 0))
         .unwrap();
     assert!(texto(&terminal).contains("sin partida guardada"));
 
@@ -209,6 +209,7 @@ fn el_menu_principal_anuncia_el_ultimo_fragmento() {
                 &mut menus.titulo,
                 &Some((7, 12, 40, 4242)),
                 &app.settings,
+                0,
             )
         })
         .unwrap();
@@ -250,7 +251,7 @@ fn el_titulo_se_dibuja_en_bloques() {
     let mut app = partida();
 
     terminal
-        .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings))
+        .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings, 0))
         .unwrap();
     let unicode = texto(&terminal);
     assert!(
@@ -265,7 +266,7 @@ fn el_titulo_se_dibuja_en_bloques() {
     // en ascii no puede quedar ni un bloque: la fuente puede no tenerlos
     app.settings.glifos = Glifos::Ascii;
     terminal
-        .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings))
+        .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings, 0))
         .unwrap();
     let plano = texto(&terminal);
     for bloque in ['█', '▀', '▄', '↑', '↓', '⏎'] {
@@ -292,6 +293,7 @@ fn el_menu_principal_entra_en_una_terminal_baja() {
                     &mut menus.titulo,
                     &Some((7, 12, 40, 4242)),
                     &app.settings,
+                    0,
                 )
             })
             .unwrap();
@@ -399,4 +401,43 @@ fn cada_tramo_se_ve_distinto() {
         }
         anteriores = Some(colores(&terminal));
     }
+}
+
+/// La cinta del relato corre, da la vuelta y siempre ocupa el mismo ancho.
+#[test]
+fn el_relato_pasa_rodando_bajo_el_titulo() {
+    use soul48::title::{PAUSA_CINTA, STORY_SUMMARY};
+
+    let capturar = |desplazamiento: usize| -> String {
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+        let mut menus = Menus::default();
+        let app = partida();
+        terminal
+            .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings, desplazamiento))
+            .unwrap();
+        texto(&terminal)
+    };
+
+    // el relato arranca por el principio
+    let inicio = capturar(0);
+    assert!(
+        inicio.contains("Despiertas en el umbral"),
+        "la cinta no arranca por el comienzo del relato"
+    );
+
+    // y se mueve
+    assert_ne!(inicio, capturar(6), "la cinta no avanzó");
+
+    // da la vuelta entera sin romperse ni salirse
+    let vuelta = STORY_SUMMARY.chars().count() + PAUSA_CINTA;
+    for paso in [1usize, 50, 200, vuelta, vuelta * 3 + 7] {
+        let pantalla = capturar(paso);
+        assert!(
+            pantalla.contains("DESCENDER AL ABISMO"),
+            "a paso {} se rompió la pantalla",
+            paso
+        );
+    }
+    // dada la vuelta completa, vuelve a decir lo mismo que al empezar
+    assert_eq!(capturar(0), capturar(vuelta), "la cinta no cierra el bucle");
 }

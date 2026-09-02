@@ -1,14 +1,60 @@
 {
   "pages": [
-    { "id": "page-1", "name": "Pantalla de título" },
-    { "id": "page-2", "name": "Descartadas" }
+    {
+      "id": "page-1",
+      "name": "Pantalla de título"
+    },
+    {
+      "id": "page-2",
+      "name": "Descartadas"
+    }
   ],
   "artboards": [
-    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 890, "h": 790, "page": "page-1", "title": "Penumbra centrada" },
-    { "file": "PenumbraAscii.dc.html", "x": 1010, "y": 0, "w": 890, "h": 790, "page": "page-1", "title": "Penumbra centrada · GLIFOS en ascii" },
-    { "file": "Pozo.dc.html", "x": 0, "y": 0, "w": 890, "h": 790, "page": "page-2", "title": "El Pozo" },
-    { "file": "Fosforo.dc.html", "x": 1010, "y": 0, "w": 890, "h": 790, "page": "page-2", "title": "Fósforo" },
-    { "file": "PenumbraIzquierda.dc.html", "x": 2020, "y": 0, "w": 890, "h": 790, "page": "page-2", "title": "Penumbra al margen" }
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 890,
+      "h": 790,
+      "page": "page-1",
+      "title": "Penumbra centrada"
+    },
+    {
+      "file": "PenumbraAscii.dc.html",
+      "x": 1010,
+      "y": 0,
+      "w": 890,
+      "h": 790,
+      "page": "page-1",
+      "title": "Penumbra centrada · GLIFOS en ascii"
+    },
+    {
+      "file": "Pozo.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 890,
+      "h": 790,
+      "page": "page-2",
+      "title": "El Pozo"
+    },
+    {
+      "file": "Fosforo.dc.html",
+      "x": 1010,
+      "y": 0,
+      "w": 890,
+      "h": 790,
+      "page": "page-2",
+      "title": "Fósforo"
+    },
+    {
+      "file": "PenumbraIzquierda.dc.html",
+      "x": 2020,
+      "y": 0,
+      "w": 890,
+      "h": 790,
+      "page": "page-2",
+      "title": "Penumbra al margen"
+    }
   ],
   "annotations": [
     {
@@ -17,7 +63,7 @@
       "y": -300,
       "w": 890,
       "page": "page-1",
-      "text": "PENUMBRA, CENTRADA\n\nMismo sistema que la versión al margen: casi monocromática —hueso y ceniza—, sin un solo borde, y aire de sobra. Ahora todo cae sobre un eje central.\n\nAl centrar, el marcador de selección sobra: una marca a la izquierda rompería la simetría que acabás de pedir. La opción elegida se distingue sólo por el color, y el color es oro, que es justo lo que theme.rs dice que significa: foco, objetivo, selección. Menos tinta, misma claridad.\n\nTodo esto lo dibuja ratatui tal cual: caracteres, un color por celda y negrita. Nada más."
+      "text": "PENUMBRA, CENTRADA\n\nMismo sistema que la versión al margen: casi monocromática —hueso y ceniza—, sin un solo borde, y aire de sobra. Ahora todo cae sobre un eje central.\n\nAl centrar, el marcador de selección sobra: una marca a la izquierda rompería la simetría que acabás de pedir. La opción elegida se distingue sólo por el color, y el color es oro, que es justo lo que theme.rs dice que significa: foco, objetivo, selección. Menos tinta, misma claridad.\n\nTodo esto lo dibuja ratatui tal cual: caracteres, un color por celda y negrita. Nada más.\n\nBAJO EL SUBTÍTULO PASA EL RELATO DEL DIFUNTO, rodando de derecha a izquierda en bucle. Acá se ve un momento del recorrido. Era el bloque de texto que la pantalla vieja tenía y que esta dirección no podía alojar: así se lee entero si te quedás, y no le quita lugar al menú si no."
     },
     {
       "id": "nota-seleccion",
@@ -52,5 +98,8 @@
       "text": "Las dos direcciones que no elegiste, y la Penumbra original al margen —por si querés comparar el centrado contra la asimetría antes de cerrar."
     }
   ],
-  "launch": { "view": "canvas", "page": "page-1" }
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
 }
