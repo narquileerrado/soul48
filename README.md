@@ -24,6 +24,8 @@
 - **Entidades Narrativas Interactivas:**
   - **Paredes Parlantes (`W`):** Murallas antiguas que susurran fragmentos de lore, advertencias y secretos.
   - **Altáres de Ecos (`A`):** Estructuras místicas donde puedes ofrecer un pacto de sangre (5 HP) para revelar la totalidad del mapa del nivel.
+- **Retratos 8-bit:** Cada criatura del Compendio tiene su retrato, y el menú principal y el fin de partida tienen ilustración. Se dibujan con medio bloque (`▀`, U+2580): cada celda pinta dos píxeles verticales, el de arriba en color de frente y el de abajo en color de fondo, así que los píxeles quedan cuadrados y no se pierde ningún color. La rampa de tonos de cada retrato sale del color que la criatura ya tiene en el mapa.
+- **Sintonizar Alma:** Pantalla de ajustes con brillo de lo recordado, líneas del historial, glifos unicode/ASCII y guardado automático. Se guardan en `settings.json`.
 - **Sistema de Guardado y Carga de Partida:** Persistencia completa del estado del juego (`savegame.json`). Tu progreso se guarda automáticamente al salir y puedes reanudarlo en cualquier momento desde el menú principal (*RECOGER FRAGMENTOS*).
 - **Combate por Turnos:** Ataca a los enemigos moviéndote hacia ellos. El daño se calcula según tu arma equipada y defensas.
 - **Enemigos con IA Adaptativa:** Mobs dormidos, errantes, agresivos, cobardes y estáticos (mímicos).
@@ -44,6 +46,24 @@ Para compilar y ejecutar este proyecto, asegúrate de tener instalado lo siguien
     -   **macOS:** Xcode Command Line Tools (`xcode-select --install`).
     -   **Windows:** [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) con la carga de trabajo de C++.
 -   **Git:** Para clonar el repositorio.
+
+## 🖥️ Fuente recomendada
+
+El juego no elige la fuente: la elige tu terminal. Para que los muros, las barras y los
+retratos se vean como corresponde, la fuente necesita **box drawing** (`U+2500–257F`) y
+**block elements** (`U+2580–259F`).
+
+- **JetBrainsMono Nerd Font** — cubre todo lo necesario y es la opción segura.
+- Para el look 8-bit de verdad: **Cozette**, **unscii-16** (pensada para arte ASCII) o
+  **PxPlus IBM VGA 8x16** del *Ultimate Oldschool PC Font Pack*, que es literalmente la
+  fuente de los roguelikes de DOS.
+- **Poné el interlineado en 1.0.** Cualquier espacio extra entre líneas abre huecos
+  horizontales entre las filas de los retratos y arruina el efecto. Es el ajuste que más
+  importa.
+
+Si tu fuente no tiene los glifos de caja, entrá a **SINTONIZAR ALMA** y poné `GLIFOS` en
+`ascii`: el mapa vuelve a `#` y `.`, las barras a `#` y `-`, y los retratos a caracteres
+planos, todo conservando el mismo tamaño en pantalla.
 
 ## 🛠️ Cómo Compilar y Ejecutar
 

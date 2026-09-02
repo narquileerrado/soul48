@@ -1,4 +1,5 @@
 use crate::map_builder;
+use crate::settings::Settings;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::{style::Color, widgets::ListState};
@@ -11,6 +12,7 @@ pub enum GameState {
     Playing,
     GameOver,
     Bestiary,
+    Options,
 }
 
 /// Define el comportamiento actual de una entidad enemiga.
@@ -117,6 +119,8 @@ pub enum LogType {
     Combat,
     Item,
     Warning,
+    /// Lo que dicen las paredes y los ecos: tiene color propio.
+    Whisper,
 }
 
 /// Estructura de un mensaje para el historial de eventos.
@@ -240,6 +244,8 @@ pub struct App {
     pub state: GameState,
     pub title_menu_state: ListState,
     pub bestiary_state: ListState,
+    pub options_state: ListState,
+    pub settings: Settings,
     rng: ChaCha8Rng,
 }
 
@@ -264,6 +270,9 @@ impl App {
 
         let mut title_menu_state = ListState::default();
         title_menu_state.select(Some(0));
+
+        let mut options_state = ListState::default();
+        options_state.select(Some(0));
 
         let mut bestiary_state = ListState::default();
         bestiary_state.select(Some(0));
@@ -314,6 +323,8 @@ impl App {
             state: initial_state,
             title_menu_state,
             bestiary_state,
+            options_state,
+            settings: Settings::load(crate::settings::RUTA_AJUSTES),
             rng,
         };
 
@@ -413,7 +424,7 @@ impl App {
                         self.entities[index] = Entity {
                             pos: entity_clone.pos,
                             glyph: '/',
-                            color: Color::Cyan,
+                            color: crate::theme::AZUL_ALMA,
                             name: format!("Espada +{}", dmg_bonus),
                             e_type: EntityType::Weapon {
                                 min_dmg: 3 + dmg_bonus,
@@ -432,11 +443,15 @@ impl App {
             EntityType::TalkingWall { message, whispered } => {
                 move_allowed = false;
                 if !*whispered {
-                    self.add_log(format!("> SUSURRO DE LA PARED: \"{}\"", message), LogType::Info);
+                    let texto = message.clone();
                     *whispered = true;
                     self.entities[index] = entity_clone;
+                    self.add_log(
+                        format!("PARED DE LOS LAMENTOS \u{00ab}{}\u{00bb}", texto),
+                        LogType::Whisper,
+                    );
                 } else {
-                    self.add_log("> La pared guarda silencio ahora.".into(), LogType::Info);
+                    self.add_log("La pared guarda silencio ahora.".into(), LogType::Whisper);
                 }
             }
             EntityType::EchoAltar { used } => {
@@ -786,7 +801,7 @@ impl App {
                         Entity {
                             pos: Point::new(0, 0),
                             glyph: '/',
-                            color: Color::Cyan,
+                            color: crate::theme::AZUL_ALMA,
                             name: old_w.0.clone(),
                             e_type: EntityType::Weapon {
                                 min_dmg: old_w.1,
@@ -929,7 +944,8 @@ impl App {
     /// Añade un mensaje al historial, manteniendo un tamaño máximo.
     pub fn add_log(&mut self, text: String, l_type: LogType) {
         self.logs.push(LogMessage { text, l_type });
-        if self.logs.len() > 5 {
+        let tope = self.settings.lineas_susurro.max(1);
+        while self.logs.len() > tope {
             self.logs.remove(0);
         }
     }
@@ -1154,10 +1170,11 @@ impl App {
 
     /// Muestra información detallada sobre un tile específico inspeccionado por el usuario.
     pub fn inspect_tile(&mut self, tx: u16, ty: u16) {
-        if tx == 0 || ty == 0 {
+        // el mapa se dibuja bajo la cinta superior: una columna y dos filas de desfase
+        if tx == 0 || ty < 2 {
             return;
         }
-        let mouse_pos = Point::new(tx as usize - 1, ty as usize - 1);
+        let mouse_pos = Point::new(tx as usize - 1, ty as usize - 2);
         if mouse_pos.y >= self.map.len() || mouse_pos.x >= self.map[0].len() {
             return;
         }
@@ -1221,6 +1238,9 @@ impl App {
         let mut title_menu_state = ListState::default();
         title_menu_state.select(Some(0));
 
+        let mut options_state = ListState::default();
+        options_state.select(Some(0));
+
         let mut bestiary_state = ListState::default();
         bestiary_state.select(Some(0));
 
@@ -1261,11 +1281,51 @@ impl App {
             state: GameState::Playing,
             title_menu_state,
             bestiary_state,
+            options_state,
+            settings: Settings::load(crate::settings::RUTA_AJUSTES),
             rng,
         };
 
         app.add_log("> Partida cargada exitosamente.".into(), LogType::Info);
         Ok(app)
+    }
+
+    /// Lo que el héroe tiene a la vista, de lo más cerca a lo más lejos.
+    pub fn entidades_cercanas(&self, tope: usize) -> Vec<(char, Color, String, usize)> {
+        let mut cerca: Vec<(char, Color, String, usize)> = self
+            .entities
+            .iter()
+            .filter(|e| self.visible[e.pos.y][e.pos.x])
+            .map(|e| {
+                let dx = (e.pos.x as isize - self.hero_pos.x as isize).abs();
+                let dy = (e.pos.y as isize - self.hero_pos.y as isize).abs();
+                (e.glyph, e.color, e.name.clone(), dx.max(dy) as usize)
+            })
+            .collect();
+        cerca.sort_by(|a, b| a.3.cmp(&b.3).then(a.2.cmp(&b.2)));
+        cerca.truncate(tope);
+        cerca
+    }
+
+    /// Lo que no se mueve, y por lo tanto se puede recordar en el mapa.
+    pub fn es_estatico(e_type: &EntityType) -> bool {
+        matches!(
+            e_type,
+            EntityType::TalkingWall { .. }
+                | EntityType::EchoAltar { .. }
+                | EntityType::Chest { .. }
+                | EntityType::Door { .. }
+                | EntityType::Hazard { .. }
+                | EntityType::SpecialRoomMarker { .. }
+        )
+    }
+
+    /// Lee lo mínimo de una partida guardada sin cargarla entera:
+    /// piso, alma, alma máxima y semilla.
+    pub fn peek_save(ruta: &str) -> Option<(u32, i32, i32, u64)> {
+        let contenido = std::fs::read_to_string(ruta).ok()?;
+        let datos: SaveData = serde_json::from_str(&contenido).ok()?;
+        Some((datos.depth, datos.hero_hp, datos.hero_max_hp, datos.seed))
     }
 
     /// Transforma los muros básicos en glifos de dibujo de caja para una mejor estética.
@@ -1371,7 +1431,7 @@ mod tests {
         let potion = Entity {
             pos: Point::new(0, 0),
             glyph: '!',
-            color: Color::Magenta,
+            color: crate::theme::HUESO,
             name: "Poción de Curación".to_string(),
             e_type: EntityType::Item,
             status_effects: Vec::new(),
@@ -1390,7 +1450,7 @@ mod tests {
         let potion = Entity {
             pos: Point::new(0, 0),
             glyph: '!',
-            color: Color::Magenta,
+            color: crate::theme::HUESO,
             name: "Poción de Curación".to_string(),
             e_type: EntityType::Item,
             status_effects: Vec::new(),
@@ -1412,7 +1472,7 @@ mod tests {
         app.entities.push(Entity {
             pos: wall_pos,
             glyph: 'W',
-            color: Color::Magenta,
+            color: crate::theme::HUESO,
             name: "Pared Parlante".to_string(),
             e_type: EntityType::TalkingWall {
                 message: "Un secreto te aguarda.".to_string(),
