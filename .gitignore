@@ -4,5 +4,7 @@
 savegame.json
 settings.json
 
-# el canvas de diseño publicado se genera con la herramienta (2,6 MB)
+# los canvas de diseño publicados los genera la herramienta y pesan megabytes;
+# lo que se versiona son las fuentes: los .dc.html, el canvas.json y el generador
 design/interfaz-soul48.html
+design/titulo/soul48-pantalla-titulo.html

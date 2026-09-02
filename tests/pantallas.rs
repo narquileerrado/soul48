@@ -213,12 +213,96 @@ fn el_menu_principal_anuncia_el_ultimo_fragmento() {
         })
         .unwrap();
     let pantalla = texto(&terminal);
-    assert!(pantalla.contains("CRIPTAS"));
+    assert!(
+        pantalla.contains("piso 7"),
+        "no se ve el piso del fragmento"
+    );
     assert!(pantalla.contains("12/40"), "no se ve el alma del fragmento");
     assert!(
         pantalla.contains("4242"),
         "no se ve la semilla del fragmento"
     );
+}
+
+/// El menú arranca por lo que uno viene a hacer: empezar, después continuar.
+#[test]
+fn el_menu_principal_empieza_por_lo_primero() {
+    use soul48::title::MainMenuOption;
+
+    let etiquetas: Vec<&str> = MainMenuOption::all().iter().map(|o| o.as_str()).collect();
+    assert_eq!(
+        etiquetas,
+        vec![
+            "DESCENDER AL ABISMO",
+            "RECOGER FRAGMENTOS",
+            "COMPENDIO DE SOMBRAS",
+            "SINTONIZAR ALMA",
+            "VOLVER AL SILENCIO",
+        ]
+    );
+}
+
+/// El título se dibuja con medio bloque y sobrevive el ajuste GLIFOS.
+#[test]
+fn el_titulo_se_dibuja_en_bloques() {
+    let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+    let mut menus = Menus::default();
+    let mut app = partida();
+
+    terminal
+        .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings))
+        .unwrap();
+    let unicode = texto(&terminal);
+    assert!(
+        unicode.contains('█') || unicode.contains('▀'),
+        "el título no se está dibujando con medio bloque"
+    );
+    assert!(
+        unicode.contains("t h e   t a l k i n g   d e a d"),
+        "falta el subtítulo"
+    );
+
+    // en ascii no puede quedar ni un bloque: la fuente puede no tenerlos
+    app.settings.glifos = Glifos::Ascii;
+    terminal
+        .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings))
+        .unwrap();
+    let plano = texto(&terminal);
+    for bloque in ['█', '▀', '▄', '↑', '↓', '⏎'] {
+        assert!(
+            !plano.contains(bloque),
+            "en modo ascii sigue apareciendo «{}»",
+            bloque
+        );
+    }
+}
+
+/// La pantalla se compacta en una terminal baja en vez de recortarse.
+#[test]
+fn el_menu_principal_entra_en_una_terminal_baja() {
+    let mut menus = Menus::default();
+    let app = partida();
+
+    for (ancho, alto) in [(120, 40), (80, 24), (60, 20), (40, 15)] {
+        let mut terminal = Terminal::new(TestBackend::new(ancho, alto)).unwrap();
+        terminal
+            .draw(|f| {
+                title::ui(
+                    f,
+                    &mut menus.titulo,
+                    &Some((7, 12, 40, 4242)),
+                    &app.settings,
+                )
+            })
+            .unwrap();
+        let pantalla = texto(&terminal);
+        assert!(
+            pantalla.contains("DESCENDER AL ABISMO"),
+            "a {}x{} se perdió la primera opción",
+            ancho,
+            alto
+        );
+    }
 }
 
 /// La pantalla de victoria existe y dice hasta dónde llegaste.
