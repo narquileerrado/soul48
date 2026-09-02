@@ -93,9 +93,17 @@ pub fn ui(f: &mut Frame, app: &App) {
     } else {
         "Puños (1-3)".to_string()
     };
+    let armor_text = app.equipped_armor.as_ref().map(|a| a.0.clone()).unwrap_or_else(|| "Ninguna".into());
+    let helmet_text = app.equipped_helmet.as_ref().map(|h| h.0.clone()).unwrap_or_else(|| "Ninguno".into());
+    let ring_text = app.equipped_ring.as_ref().map(|r| r.0.clone()).unwrap_or_else(|| "Ninguno".into());
+    let amulet_text = app.equipped_amulet.as_ref().map(|am| am.0.clone()).unwrap_or_else(|| "Ninguno".into());
+
     let stats = format!(
-        "PISO: {}\nHP: {}/{}\nCORDURA: {}/{}\nARMA: {}\nSEED: {}",
-        app.depth, app.hero_hp, app.hero_max_hp, app.sanity, app.max_sanity, weapon_text, app.seed
+        "NIVEL: {}  XP: {}/{}\nHP: {}/{}  COR: {}/{}\nFUE: {}  AGI: {}  VOL: {}\nARMA: {}\nARM: {}  CAS: {}\nANI: {}  AMU: {}\nSEED: {}",
+        app.level, app.xp, app.next_level_xp,
+        app.hero_hp, app.hero_max_hp, app.sanity, app.max_sanity,
+        app.strength, app.agility, app.willpower,
+        weapon_text, armor_text, helmet_text, ring_text, amulet_text, app.seed
     );
     f.render_widget(
         Paragraph::new(stats).block(

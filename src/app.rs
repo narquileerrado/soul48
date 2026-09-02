@@ -48,6 +48,18 @@ pub enum EntityType {
         min_dmg: i32,
         max_dmg: i32,
     },
+    Armor {
+        defense: i32,
+    },
+    Helmet {
+        defense: i32,
+    },
+    Ring {
+        stat_bonus: i32,
+    },
+    Amulet {
+        sanity_bonus: i32,
+    },
     Chest {
         locked: bool,
     },
@@ -163,10 +175,20 @@ pub struct SaveData {
     pub hero_max_hp: i32,
     pub sanity: i32,
     pub max_sanity: i32,
+    pub level: u32,
+    pub xp: u32,
+    pub next_level_xp: u32,
+    pub strength: i32,
+    pub agility: i32,
+    pub willpower: i32,
     pub hero_status_effects: Vec<StatusEffect>,
     pub parry_active: bool,
     pub invisible_turns: usize,
     pub equipped_weapon: Option<(String, i32, i32)>,
+    pub equipped_armor: Option<(String, i32)>,
+    pub equipped_helmet: Option<(String, i32)>,
+    pub equipped_ring: Option<(String, i32)>,
+    pub equipped_amulet: Option<(String, i32)>,
     pub logs: Vec<LogMessage>,
     pub map: Vec<Vec<char>>,
     pub visible: Vec<Vec<bool>>,
@@ -184,10 +206,20 @@ pub struct App {
     pub hero_max_hp: i32,
     pub sanity: i32,
     pub max_sanity: i32,
+    pub level: u32,
+    pub xp: u32,
+    pub next_level_xp: u32,
+    pub strength: i32,
+    pub agility: i32,
+    pub willpower: i32,
     pub hero_status_effects: Vec<StatusEffect>,
     pub parry_active: bool,
     pub invisible_turns: usize,
     pub equipped_weapon: Option<(String, i32, i32)>,
+    pub equipped_armor: Option<(String, i32)>,
+    pub equipped_helmet: Option<(String, i32)>,
+    pub equipped_ring: Option<(String, i32)>,
+    pub equipped_amulet: Option<(String, i32)>,
     pub logs: Vec<LogMessage>,
     pub map: Vec<Vec<char>>,
     pub visible: Vec<Vec<bool>>,
@@ -246,10 +278,20 @@ impl App {
             hero_max_hp: 20,
             sanity: 100,
             max_sanity: 100,
+            level: 1,
+            xp: 0,
+            next_level_xp: 50,
+            strength: 5,
+            agility: 5,
+            willpower: 5,
             hero_status_effects: Vec::new(),
             parry_active: false,
             invisible_turns: 0,
             equipped_weapon: weapon,
+            equipped_armor: None,
+            equipped_helmet: None,
+            equipped_ring: None,
+            equipped_amulet: None,
             logs: vec![LogMessage {
                 text: format!("> NIVEL {} - SEED: {}", depth, seed),
                 l_type: LogType::Info,
@@ -333,6 +375,15 @@ impl App {
                             format!("> {} eliminada.", entity_clone.name),
                             LogType::Combat,
                         );
+                    let gained_xp = match entity_clone.name.as_str() {
+                        "Murciélago" => 10,
+                        "Serpiente" => 15,
+                        "Ladrón" => 20,
+                        "Gnoll" => 30,
+                        "Cofre Sospechoso" => 45,
+                        _ => 15,
+                    };
+                    self.add_xp(gained_xp);
                         entity_index_to_remove = Some(index);
                     }
                     self.entities[index] = entity_clone;
@@ -484,7 +535,7 @@ impl App {
                     }
                 }
             }
-            EntityType::Item | EntityType::Key | EntityType::Weapon { .. } | EntityType::Scroll { .. } => {
+            EntityType::Item | EntityType::Key | EntityType::Weapon { .. } | EntityType::Scroll { .. } | EntityType::Armor { .. } | EntityType::Helmet { .. } | EntityType::Ring { .. } | EntityType::Amulet { .. } => {
                 let is_stackable =
                     matches!(entity_clone.e_type, EntityType::Item | EntityType::Key | EntityType::Scroll { .. });
 
@@ -614,6 +665,31 @@ impl App {
         true
     }
 
+    /// Añade experiencia al personaje y gestiona subidas de nivel.
+    pub fn add_xp(&mut self, amount: u32) {
+        self.xp += amount;
+        self.add_log(format!("> Ganas {} de experiencia.", amount), LogType::Info);
+
+        while self.xp >= self.next_level_xp {
+            self.xp -= self.next_level_xp;
+            self.level += 1;
+            self.next_level_xp = (self.next_level_xp as f32 * 1.5) as u32;
+
+            self.hero_max_hp += 5;
+            self.hero_hp = self.hero_max_hp;
+            self.max_sanity += 10;
+            self.sanity = self.max_sanity;
+            self.strength += 1;
+            self.agility += 1;
+            self.willpower += 1;
+
+            self.add_log(
+                format!("> ¡SUBIDA DE NIVEL! Alcanzas el Nivel {}. Atributos incrementados.", self.level),
+                LogType::Info,
+            );
+        }
+    }
+
     /// Cierra el prompt de descenso.
     pub fn confirm_descent(&mut self) {
         self.show_descend_prompt = false;
@@ -720,6 +796,78 @@ impl App {
                 }
                 self.equipped_weapon = Some((item.name.clone(), min_dmg, max_dmg));
                 self.add_log(format!("> Equipas {}.", item.name), LogType::Info);
+                item_used = true;
+            }
+            EntityType::Armor { defense } => {
+                if let Some(old_a) = &self.equipped_armor {
+                    self.inventory.push((
+                        Entity {
+                            pos: Point::new(0, 0),
+                            glyph: '[',
+                            color: Color::Gray,
+                            name: old_a.0.clone(),
+                            e_type: EntityType::Armor { defense: old_a.1 },
+                            status_effects: Vec::new(),
+                        },
+                        1,
+                    ));
+                }
+                self.equipped_armor = Some((item.name.clone(), defense));
+                self.add_log(format!("> Equipas armadura {}.", item.name), LogType::Info);
+                item_used = true;
+            }
+            EntityType::Helmet { defense } => {
+                if let Some(old_h) = &self.equipped_helmet {
+                    self.inventory.push((
+                        Entity {
+                            pos: Point::new(0, 0),
+                            glyph: '^',
+                            color: Color::Yellow,
+                            name: old_h.0.clone(),
+                            e_type: EntityType::Helmet { defense: old_h.1 },
+                            status_effects: Vec::new(),
+                        },
+                        1,
+                    ));
+                }
+                self.equipped_helmet = Some((item.name.clone(), defense));
+                self.add_log(format!("> Equipas casco {}.", item.name), LogType::Info);
+                item_used = true;
+            }
+            EntityType::Ring { stat_bonus } => {
+                if let Some(old_r) = &self.equipped_ring {
+                    self.inventory.push((
+                        Entity {
+                            pos: Point::new(0, 0),
+                            glyph: '=',
+                            color: Color::Yellow,
+                            name: old_r.0.clone(),
+                            e_type: EntityType::Ring { stat_bonus: old_r.1 },
+                            status_effects: Vec::new(),
+                        },
+                        1,
+                    ));
+                }
+                self.equipped_ring = Some((item.name.clone(), stat_bonus));
+                self.add_log(format!("> Equipas anillo {}.", item.name), LogType::Info);
+                item_used = true;
+            }
+            EntityType::Amulet { sanity_bonus } => {
+                if let Some(old_am) = &self.equipped_amulet {
+                    self.inventory.push((
+                        Entity {
+                            pos: Point::new(0, 0),
+                            glyph: '"',
+                            color: Color::LightCyan,
+                            name: old_am.0.clone(),
+                            e_type: EntityType::Amulet { sanity_bonus: old_am.1 },
+                            status_effects: Vec::new(),
+                        },
+                        1,
+                    ));
+                }
+                self.equipped_amulet = Some((item.name.clone(), sanity_bonus));
+                self.add_log(format!("> Equipas amuleto {}.", item.name), LogType::Info);
                 item_used = true;
             }
             _ => {
@@ -1025,10 +1173,20 @@ impl App {
             hero_max_hp: self.hero_max_hp,
             sanity: self.sanity,
             max_sanity: self.max_sanity,
+            level: self.level,
+            xp: self.xp,
+            next_level_xp: self.next_level_xp,
+            strength: self.strength,
+            agility: self.agility,
+            willpower: self.willpower,
             hero_status_effects: self.hero_status_effects.clone(),
             parry_active: self.parry_active,
             invisible_turns: self.invisible_turns,
             equipped_weapon: self.equipped_weapon.clone(),
+            equipped_armor: self.equipped_armor.clone(),
+            equipped_helmet: self.equipped_helmet.clone(),
+            equipped_ring: self.equipped_ring.clone(),
+            equipped_amulet: self.equipped_amulet.clone(),
             logs: self.logs.clone(),
             map: self.map.clone(),
             visible: self.visible.clone(),
@@ -1063,10 +1221,20 @@ impl App {
             hero_max_hp: save_data.hero_max_hp,
             sanity: save_data.sanity,
             max_sanity: save_data.max_sanity,
+            level: save_data.level,
+            xp: save_data.xp,
+            next_level_xp: save_data.next_level_xp,
+            strength: save_data.strength,
+            agility: save_data.agility,
+            willpower: save_data.willpower,
             hero_status_effects: save_data.hero_status_effects,
             parry_active: save_data.parry_active,
             invisible_turns: save_data.invisible_turns,
             equipped_weapon: save_data.equipped_weapon,
+            equipped_armor: save_data.equipped_armor,
+            equipped_helmet: save_data.equipped_helmet,
+            equipped_ring: save_data.equipped_ring,
+            equipped_amulet: save_data.equipped_amulet,
             logs: save_data.logs,
             map: save_data.map,
             visible: save_data.visible,
@@ -1441,5 +1609,38 @@ mod tests {
         assert!(action);
         assert_eq!(app.hero_pos, hazard_pos);
         assert_eq!(app.hero_hp, initial_hp - 4);
+    }
+
+    #[test]
+    fn test_add_xp_and_level_up() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+
+        assert_eq!(app.level, 1);
+        app.add_xp(60); // 60 >= 50 (next_level_xp)
+        assert_eq!(app.level, 2);
+        assert_eq!(app.strength, 6);
+        assert_eq!(app.agility, 6);
+        assert_eq!(app.willpower, 6);
+    }
+
+    #[test]
+    fn test_equip_armor_and_helmet() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+
+        let armor = Entity {
+            pos: Point::new(0, 0),
+            glyph: '[',
+            color: Color::Gray,
+            name: "Cota de Malla".to_string(),
+            e_type: EntityType::Armor { defense: 4 },
+            status_effects: Vec::new(),
+        };
+        app.inventory.push((armor, 1));
+
+        assert!(app.use_item(0));
+        assert!(app.inventory.is_empty());
+        assert_eq!(app.equipped_armor, Some(("Cota de Malla".to_string(), 4)));
     }
 }

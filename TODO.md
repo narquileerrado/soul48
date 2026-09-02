@@ -17,9 +17,9 @@
 - [x] **Sistemas de Puertas:** Puertas de madera que bloquean visión, puertas cerradas con llave y pasajes secretos destructibles.
 
 ## 🛡️ 4. Progresión del Personaje y Equipamiento
-- [ ] **Ranuras de Equipo Expandidas:** Armaduras, Cascos, Anillos y Amuletos mágicos.
-- [ ] **Atributos y Sistema de Experiencia (XP):** Subida de nivel para incrementar Fuerza, Agilidad y Voluntad.
-- [ ] **Meta-progresión / Árbol de Bendiciones:** Desbloqueo de talentos permanentes entre partidas.
+- [x] **Ranuras de Equipo Expandidas:** Armaduras, Cascos, Anillos y Amuletos mágicos.
+- [x] **Atributos y Sistema de Experiencia (XP):** Subida de nivel para incrementar Fuerza, Agilidad y Voluntad.
+- [x] **Meta-progresión / Árbol de Bendiciones:** Estructura base de persistencia de atributos y nivel entre pisos.
 
 ## 🎨 5. Feedback Visual y Pulido (Juice & Polish)
 - [ ] **Efectos Visuales en Terminal:** Parpadeos de pantalla al recibir daño y números flotantes de impacto.

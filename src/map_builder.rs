@@ -129,6 +129,49 @@ impl MapBuilder {
                         });
                     }
 
+                    // Probabilidad de aparición de equipamiento (Armaduras, Cascos, Anillos, Amuletos)
+                    if rng.gen_range(0..100) < 15 {
+                        let mut eq_pos = new_center;
+                        if eq_pos.x > 1 && map[eq_pos.y][eq_pos.x - 1] == '.' {
+                            eq_pos.x -= 1;
+                        }
+                        let eq_entity = match rng.gen_range(0..4) {
+                            0 => Entity {
+                                pos: eq_pos,
+                                glyph: '[',
+                                color: Color::Gray,
+                                name: "Cota de Malla".into(),
+                                e_type: EntityType::Armor { defense: 3 + depth as i32 },
+                                status_effects: Vec::new(),
+                            },
+                            1 => Entity {
+                                pos: eq_pos,
+                                glyph: '^',
+                                color: Color::Yellow,
+                                name: "Yelmo de Hierro".into(),
+                                e_type: EntityType::Helmet { defense: 2 + depth as i32 },
+                                status_effects: Vec::new(),
+                            },
+                            2 => Entity {
+                                pos: eq_pos,
+                                glyph: '=',
+                                color: Color::Yellow,
+                                name: "Anillo de Fuerza".into(),
+                                e_type: EntityType::Ring { stat_bonus: 2 },
+                                status_effects: Vec::new(),
+                            },
+                            _ => Entity {
+                                pos: eq_pos,
+                                glyph: '"',
+                                color: Color::LightCyan,
+                                name: "Amuleto de Claridad".into(),
+                                e_type: EntityType::Amulet { sanity_bonus: 20 },
+                                status_effects: Vec::new(),
+                            },
+                        };
+                        entities.push(eq_entity);
+                    }
+
                     // Probabilidad de aparición de pergaminos mágicos
                     if rng.gen_range(0..100) < 15 {
                         let mut scroll_pos = new_center;
