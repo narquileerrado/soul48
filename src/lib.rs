@@ -15,7 +15,6 @@ pub mod game;
 pub use game as app;
 pub mod bestiary;
 pub mod input;
-pub mod map_builder;
 pub mod menus;
 pub mod player;
 pub mod settings;

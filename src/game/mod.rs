@@ -16,9 +16,9 @@ pub mod save;
 pub use save::SaveData;
 
 use crate::balance;
-use crate::map_builder;
 use crate::player::Player;
 use crate::settings::Settings;
+use crate::world::map_builder;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::style::Color;

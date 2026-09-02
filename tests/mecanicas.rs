@@ -7,8 +7,8 @@ use soul48::app::{
     App, EnemyAI, EnemyState, Entity, EntityType, HazardType, LogType, Point, ScrollType,
     StatusEffect, StatusEffectType,
 };
-use soul48::map_builder::MapBuilder;
 use soul48::theme;
+use soul48::world::MapBuilder;
 
 /// Un mob de prueba con estadísticas explícitas.
 fn mob(pos: Point, nombre: &str, hp: i32, dmg: (i32, i32), defense: i32, ai: EnemyAI) -> Entity {

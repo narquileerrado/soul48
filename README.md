@@ -15,7 +15,7 @@
 
 **Soul 48** es una prueba de concepto (PoC) de un juego *roguelike* para terminal, desarrollado en Rust. Inspirado en la exploración de mazmorras y el combate por turnos, este proyecto utiliza la biblioteca `ratatui` para renderizar una interfaz de texto dinámica y atractiva.
 
-> Despiertas en la penumbra del piso 48. No eres más que un eco de quien fuiste, un alma atada a un cuerpo que ya no respira. El demonio que te arrebató la vida te observa desde las profundidades, burlándose de tu silencio. Para recuperar tu voz y tu destino, debes ascender. Pero ten cuidado: en este dominio, hasta las paredes tienen algo que decir, y la muerte es solo el comienzo de una nueva conversación.
+> Despiertas en el umbral, sin voz. No eres más que un eco de quien fuiste, un alma atada a un cuerpo que ya no respira. Cuarenta y ocho pisos más abajo, el Archidemonio del Silencio guarda lo que te arrebató y se burla de que no puedas nombrarlo. Para recuperar tu voz y tu destino, hay que bajar hasta él. Pero ten cuidado: en este dominio, hasta las paredes tienen algo que decir, y la muerte es solo el comienzo de una nueva conversación.
 
 ## 🚀 Características
 
@@ -45,7 +45,7 @@
 
 Para compilar y ejecutar este proyecto, asegúrate de tener instalado lo siguiente:
 
--   **Rust:** Se recomienda la versión estable (1.70 o superior). Puedes instalarlo desde [rust-lang.org](https://www.rust-lang.org/tools/install).
+-   **Rust:** 1.87 o superior (el código usa `is_multiple_of`, estabilizado ahí). Puedes instalarlo desde [rust-lang.org](https://www.rust-lang.org/tools/install).
 -   **Cargo:** El gestor de paquetes de Rust (incluido con la instalación de Rust).
 -   **Herramientas de compilación:**
     -   **Linux:** `build-essential` (o equivalente como `base-devel`).
@@ -117,9 +117,12 @@ Sigue estos pasos para poner en marcha el juego:
 - **Flechas Arriba/Abajo:** Seleccionar una criatura.
 - **Q / Esc:** Volver al menú principal.
 
-### Pantalla de Game Over
-- **R:** Reiniciar la partida.
+### Pantallas de Cierre
+Al caer (**FIN DE LA PARTIDA**) o al vencer al Archidemonio (**EL ORIGEN**):
+- **R:** Empezar otra bajada desde el piso 1.
 - **Q / Esc:** Salir del juego.
+
+En los dos casos el fragmento guardado se disuelve: la corrida es de ida.
 
 ## 📂 Estructura del Proyecto
 
@@ -127,12 +130,10 @@ El crate expone una biblioteca (`src/lib.rs`) y un binario delgado, para que los
 tests de integración de `tests/` puedan armar partidas completas.
 
 -   `main.rs`: Punto de entrada. Prende y apaga la terminal, dibuja la pantalla que corresponde al estado y despacha cada tecla. Nada más.
--   `game/`: El núcleo de la lógica, un archivo por sistema: `mod.rs` (estado y turno), `interaction.rs` (choques contra entidades), `combat.rs`, `inventory.rs`, `ai.rs`, `fov.rs`, `map.rs` y `save.rs`.
--   `ui/`: El dibujo, un archivo por pantalla: `widgets.rs` (piezas compartidas), `juego.rs`, `compendio.rs` y `opciones.rs`.
--   `map_builder.rs`: Responsable de la generación procedimental de los niveles. Implementa el algoritmo de excavación de habitaciones y túneles, así como la colocación aleatoria de enemigos y objetos.
+-   `game/`: El núcleo de la lógica, un archivo por sistema: `mod.rs` (estado y turno), `interaction.rs` (choques contra entidades), `combat.rs`, `inventory.rs`, `ai.rs`, `pathing.rs` (el campo de flujo que usan los enemigos para encontrarte), `fov.rs`, `map.rs` y `save.rs`.
+-   `ui/`: El dibujo, un archivo por pantalla: `widgets.rs` (piezas compartidas), `juego.rs`, `compendio.rs`, `opciones.rs` y `final_.rs` (las dos pantallas de cierre).
+-   `world/`: Cómo está hecho cada piso. `map_builder.rs` excava habitaciones y túneles y reparte entidades; `tramo.rs` define los cuatro tramos del descenso, con su paleta, sus voces y su Guardián.
 -   `bestiary.rs`: El catálogo de criaturas. Es la **única** fuente: de acá salen los mobs que genera el mapa, los jefes y las fichas del Compendio, así que lo que leés en el compendio es lo que te vas a cruzar.
--   `world/tramo.rs`: Los cuatro tramos del descenso, con su paleta, sus voces y su Guardián.
--   `game/pathing.rs`: El campo de flujo que usan los enemigos para encontrarte.
 -   `title.rs`: Se encarga exclusivamente de la lógica y presentación de la pantalla de título y el menú principal.
 -   `player.rs`: El héroe: sus números, sus atributos, sus cinco ranuras de equipo y todo lo que de ellos se deriva.
 -   `balance.rs`: Los números que definen cómo se siente el juego, agrupados por tema. El balance se ajusta acá sin leer la lógica.
@@ -146,7 +147,7 @@ tests de integración de `tests/` puedan armar partidas completas.
 
 ```bash
 cargo test                                   # todo
-cargo fmt --check && cargo clippy -- -D warnings
+cargo fmt --check && cargo clippy --all-targets -- -D warnings
 ```
 
 -   `tests/basicos.rs`: mecánicas puntuales.

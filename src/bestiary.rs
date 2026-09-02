@@ -1,7 +1,7 @@
 //! El catálogo de criaturas: una sola fuente para el juego y el compendio.
 //!
 //! Antes las estadísticas estaban escritas dos veces —una en `EnemyTemplate`
-//! dentro de `map_builder.rs` para generar los mobs, otra en `BestiaryEntry`
+//! dentro de `world/map_builder.rs` para generar los mobs, otra en `BestiaryEntry`
 //! acá para mostrarlos— con los colores RGB copiados a mano en ambos lados,
 //! aunque ya existían en `theme`. Cambiar la vida de una serpiente obligaba a
 //! acordarse del otro archivo, y el compendio podía mentir sin que nada fallara.

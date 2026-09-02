@@ -1,9 +1,9 @@
+use super::tramo;
 use crate::app::{
     EnemyAI, EnemyState, Entity, EntityType, HazardType, Point, ScrollType, SpecialRoomType,
 };
 use crate::balance;
 use crate::bestiary;
-use crate::world::tramo;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::collections::HashSet;
