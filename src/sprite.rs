@@ -63,12 +63,16 @@ impl Paleta {
 
 impl Sprite {
     pub fn ancho(&self) -> usize {
-        self.arte.iter().map(|f| f.chars().count()).max().unwrap_or(0)
+        self.arte
+            .iter()
+            .map(|f| f.chars().count())
+            .max()
+            .unwrap_or(0)
     }
 
     /// Alto en filas de terminal: dos píxeles por celda, redondeando hacia arriba.
     pub fn alto_en_celdas(&self) -> u16 {
-        ((self.arte.len() + 1) / 2) as u16
+        self.arte.len().div_ceil(2) as u16
     }
 
     /// Dibuja el sprite. `ascii` cae a caracteres planos para cuando la fuente
@@ -77,7 +81,10 @@ impl Sprite {
         let filas: Vec<Vec<char>> = self.arte.iter().map(|f| f.chars().collect()).collect();
         let ancho = self.ancho();
         let px = |x: usize, y: usize| -> Option<Color> {
-            filas.get(y).and_then(|f| f.get(x)).and_then(|c| pal.color(*c))
+            filas
+                .get(y)
+                .and_then(|f| f.get(x))
+                .and_then(|c| pal.color(*c))
         };
 
         let mut salida = Vec::with_capacity(self.alto_en_celdas() as usize);
@@ -104,19 +111,16 @@ impl Sprite {
                     // defecto sería un bloque sólido. Según cuál de los dos falte
                     // se usa medio bloque de arriba, de abajo, o nada.
                     let span = match (arriba, abajo) {
-                        (Some(a), Some(b)) => Span::styled(
-                            "▀".to_string(),
-                            Style::default().fg(a).bg(b),
-                        ),
+                        (Some(a), Some(b)) => {
+                            Span::styled("▀".to_string(), Style::default().fg(a).bg(b))
+                        }
                         (Some(a), None) => {
                             Span::styled("▀".to_string(), Style::default().fg(a).bg(fondo))
                         }
                         (None, Some(b)) => {
                             Span::styled("▄".to_string(), Style::default().fg(b).bg(fondo))
                         }
-                        (None, None) => {
-                            Span::styled(" ".to_string(), Style::default().bg(fondo))
-                        }
+                        (None, None) => Span::styled(" ".to_string(), Style::default().bg(fondo)),
                     };
                     spans.push(span);
                 }

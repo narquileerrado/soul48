@@ -68,7 +68,13 @@ impl Settings {
                 Glifos::Unicode => "unicode".into(),
                 Glifos::Ascii => "ascii".into(),
             },
-            3 => if self.guardado_automatico { "automático".into() } else { "manual".into() },
+            3 => {
+                if self.guardado_automatico {
+                    "automático".into()
+                } else {
+                    "manual".into()
+                }
+            }
             _ => String::new(),
         }
     }
@@ -101,8 +107,12 @@ impl Settings {
             }
             1 => {
                 let opciones = [3usize, 5, 8];
-                let actual = opciones.iter().position(|o| *o == self.lineas_susurro).unwrap_or(1);
-                let siguiente = (actual as i32 + delta).clamp(0, opciones.len() as i32 - 1) as usize;
+                let actual = opciones
+                    .iter()
+                    .position(|o| *o == self.lineas_susurro)
+                    .unwrap_or(1);
+                let siguiente =
+                    (actual as i32 + delta).clamp(0, opciones.len() as i32 - 1) as usize;
                 self.lineas_susurro = opciones[siguiente];
             }
             2 => {
