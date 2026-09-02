@@ -1,12 +1,17 @@
 mod app;
+mod arte;
 mod bestiary;
 mod map_builder;
+mod sprite;
+mod settings;
+mod theme;
 mod title;
 mod ui;
 
 use app::{App, GameState, LogType};
+use settings::{AJUSTES, RUTA_AJUSTES};
 use title::MainMenuOption;
-use ui::{bestiary_ui, game_over_ui, ui};
+use ui::{bestiary_ui, game_over_ui, options_ui, ui};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -28,13 +33,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Inicialización del estado de la aplicación
     let mut app = App::new(None, None, None, 1, None);
+    // qué te espera si elegís RECOGER FRAGMENTOS
+    let fragmento = App::peek_save("savegame.json");
 
     loop {
         // --- 1. RENDERIZADO ---
         // Dibuja la interfaz correspondiente según el estado actual del juego
         match app.state {
             GameState::TitleScreen => {
-                terminal.draw(|f| title::ui(f, &mut app.title_menu_state))?;
+                terminal.draw(|f| title::ui(f, &mut app.title_menu_state, &fragmento, &app.settings))?;
             }
             GameState::Playing => {
                 terminal.draw(|f| ui(f, &app))?;
@@ -43,7 +50,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 terminal.draw(|f| game_over_ui(f, &app))?;
             }
             GameState::Bestiary => {
-                terminal.draw(|f| bestiary_ui(f, &mut app.bestiary_state))?;
+                terminal.draw(|f| bestiary_ui(f, &mut app.bestiary_state, &app.settings))?;
+            }
+            GameState::Options => {
+                terminal.draw(|f| options_ui(f, &app.settings, &mut app.options_state))?;
             }
         }
 
@@ -93,11 +103,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                                             if let Ok(loaded_app) = App::load_from_file("savegame.json") {
                                                 app = loaded_app;
                                             } else {
-                                                app.add_log("> No se encontró ninguna partida guardada.".into(), LogType::Warning);
+                                                app.add_log("No se encontró ninguna partida guardada.".into(), LogType::Warning);
                                             }
                                         }
+                                        MainMenuOption::Options => {
+                                            app.state = GameState::Options;
+                                        }
                                         MainMenuOption::Quit => break,
-                                        _ => {}
                                     }
                                 }
                             }
@@ -139,6 +151,36 @@ fn main() -> Result<(), Box<dyn Error>> {
                             _ => {}
                         },
 
+                        // Sintonizar alma: ajustes que hacen algo hoy
+                        GameState::Options => {
+                            let total = AJUSTES.len();
+                            let actual = app.options_state.selected().unwrap_or(0);
+                            match key.code {
+                                KeyCode::Up => {
+                                    let i = if actual == 0 { total - 1 } else { actual - 1 };
+                                    app.options_state.select(Some(i));
+                                }
+                                KeyCode::Down => {
+                                    let i = if actual >= total - 1 { 0 } else { actual + 1 };
+                                    app.options_state.select(Some(i));
+                                }
+                                KeyCode::Left => app.settings.ajustar(actual, -1),
+                                KeyCode::Right => app.settings.ajustar(actual, 1),
+                                KeyCode::Enter => {
+                                    if actual == total - 1 {
+                                        app.settings.restablecer();
+                                    } else {
+                                        app.settings.ajustar(actual, 1);
+                                    }
+                                }
+                                KeyCode::Char('q') | KeyCode::Esc => {
+                                    app.settings.save(RUTA_AJUSTES);
+                                    app.state = GameState::TitleScreen;
+                                }
+                                _ => {}
+                            }
+                        }
+
                         // Lógica principal durante la exploración de la mazmorra
                         GameState::Playing => {
                             if app.show_descend_prompt {
@@ -176,7 +218,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                             let mut action_taken = false;
                             match key.code {
                                 KeyCode::Char('q') | KeyCode::Esc => {
-                                    let _ = app.save_to_file("savegame.json");
+                                    if app.settings.guardado_automatico {
+                                        let _ = app.save_to_file("savegame.json");
+                                    }
                                     break;
                                 }
                                 KeyCode::Up => {
@@ -190,6 +234,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 }
                                 KeyCode::Right => {
                                     action_taken = app.try_move(1, 0);
+                                }
+
+                                KeyCode::Char('v') | KeyCode::Char('V') => {
+                                    action_taken = app.raise_voice();
                                 }
 
                                 KeyCode::Char('d') => {
@@ -232,6 +280,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 if !app.show_descend_prompt {
                                     app.process_enemy_turns();
                                     app.calculate_fov();
+                                    app.tick_turn();
 
                                     // Verificación de estado de salud del héroe
                                     if app.hero_hp <= 0 {

@@ -1,4 +1,5 @@
 use crate::map_builder;
+use crate::settings::Settings;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::{style::Color, widgets::ListState};
@@ -11,6 +12,7 @@ pub enum GameState {
     Playing,
     GameOver,
     Bestiary,
+    Options,
 }
 
 /// Define el comportamiento actual de una entidad enemiga.
@@ -67,6 +69,8 @@ pub enum LogType {
     Combat,
     Item,
     Warning,
+    /// Lo que dicen las paredes y los ecos: tiene color propio.
+    Whisper,
 }
 
 /// Estructura de un mensaje para el historial de eventos.
@@ -113,6 +117,17 @@ pub struct SaveData {
     pub inventory: Vec<(Entity, usize)>,
     pub seed: u64,
     pub depth: u32,
+    #[serde(default)]
+    pub hero_voice: i32,
+    #[serde(default = "voz_maxima_por_defecto")]
+    pub hero_max_voice: i32,
+    #[serde(default)]
+    pub turns: u64,
+}
+
+/// Voz máxima para partidas guardadas antes de que existiera el medidor.
+fn voz_maxima_por_defecto() -> i32 {
+    10
 }
 
 /// Estructura principal que mantiene el estado global de la simulación.
@@ -120,6 +135,11 @@ pub struct App {
     pub hero_pos: Point,
     pub hero_hp: i32,
     pub hero_max_hp: i32,
+    /// La voz robada que vas recuperando: se gasta al hablar.
+    pub hero_voice: i32,
+    pub hero_max_voice: i32,
+    /// Turnos jugados en este piso, para el desgaste de la penumbra.
+    pub turns: u64,
     pub equipped_weapon: Option<(String, i32, i32)>,
     pub logs: Vec<LogMessage>,
     pub map: Vec<Vec<char>>,
@@ -139,6 +159,8 @@ pub struct App {
     pub state: GameState,
     pub title_menu_state: ListState,
     pub bestiary_state: ListState,
+    pub options_state: ListState,
+    pub settings: Settings,
     rng: ChaCha8Rng,
 }
 
@@ -167,6 +189,9 @@ impl App {
         let mut bestiary_state = ListState::default();
         bestiary_state.select(Some(0));
 
+        let mut options_state = ListState::default();
+        options_state.select(Some(0));
+
         let initial_state = if depth == 1 && hp.is_none() {
             GameState::TitleScreen
         } else {
@@ -177,6 +202,9 @@ impl App {
             hero_pos,
             hero_hp: hp.unwrap_or(20),
             hero_max_hp: 20,
+            hero_voice: 0,
+            hero_max_voice: 10,
+            turns: 0,
             equipped_weapon: weapon,
             logs: vec![LogMessage {
                 text: format!("> NIVEL {} - SEED: {}", depth, seed),
@@ -197,6 +225,8 @@ impl App {
             state: initial_state,
             title_menu_state,
             bestiary_state,
+            options_state,
+            settings: Settings::load(crate::settings::RUTA_AJUSTES),
             rng,
         };
 
@@ -272,7 +302,7 @@ impl App {
                         self.entities[index] = Entity {
                             pos: entity_clone.pos,
                             glyph: '/',
-                            color: Color::Cyan,
+                            color: crate::theme::AZUL_ALMA,
                             name: format!("Espada +{}", dmg_bonus),
                             e_type: EntityType::Weapon {
                                 min_dmg: 3 + dmg_bonus,
@@ -290,11 +320,24 @@ impl App {
             EntityType::TalkingWall { message, whispered } => {
                 move_allowed = false;
                 if !*whispered {
-                    self.add_log(format!("> SUSURRO DE LA PARED: \"{}\"", message), LogType::Info);
+                    let texto = message.clone();
                     *whispered = true;
                     self.entities[index] = entity_clone;
+                    self.add_log(
+                        format!("PARED DE LOS LAMENTOS «{}»", texto),
+                        LogType::Whisper,
+                    );
+                    // escuchar a los muertos es como recuperás la voz
+                    let recuperada = (self.hero_max_voice - self.hero_voice).min(2);
+                    if recuperada > 0 {
+                        self.hero_voice += recuperada;
+                        self.add_log(
+                            format!("Recuperás {} de voz al escucharla.", recuperada),
+                            LogType::Whisper,
+                        );
+                    }
                 } else {
-                    self.add_log("> La pared guarda silencio ahora.".into(), LogType::Info);
+                    self.add_log("La pared guarda silencio ahora.".into(), LogType::Whisper);
                 }
             }
             EntityType::EchoAltar { used } => {
@@ -304,8 +347,15 @@ impl App {
                         self.hero_hp -= 5;
                         *used = true;
                         self.entities[index] = entity_clone;
-                        self.add_log("> PACTO DE SANGRE: Ofreces 5 HP al Altar de Ecos.".into(), LogType::Warning);
-                        self.add_log("> EL PISO SE REVELA ANTE TI.".into(), LogType::Info);
+                        self.add_log(
+                            "PACTO DE SANGRE: ofrecés 5 de alma al Altar de Ecos.".into(),
+                            LogType::Warning,
+                        );
+                        self.add_log("EL PISO SE REVELA ANTE VOS.".into(), LogType::Info);
+                        if self.hero_voice < self.hero_max_voice {
+                            self.hero_voice += 1;
+                            self.add_log("El eco te devuelve algo de voz.".into(), LogType::Whisper);
+                        }
 
                         // Revela todo el mapa explorado
                         let map_height = self.map.len();
@@ -446,7 +496,7 @@ impl App {
                         Entity {
                             pos: Point::new(0, 0),
                             glyph: '/',
-                            color: Color::Cyan,
+                            color: crate::theme::AZUL_ALMA,
                             name: old_w.0.clone(),
                             e_type: EntityType::Weapon {
                                 min_dmg: old_w.1,
@@ -516,7 +566,8 @@ impl App {
     /// Añade un mensaje al historial, manteniendo un tamaño máximo.
     pub fn add_log(&mut self, text: String, l_type: LogType) {
         self.logs.push(LogMessage { text, l_type });
-        if self.logs.len() > 5 {
+        let tope = self.settings.lineas_susurro.max(1);
+        while self.logs.len() > tope {
             self.logs.remove(0);
         }
     }
@@ -682,10 +733,11 @@ impl App {
 
     /// Muestra información detallada sobre un tile específico inspeccionado por el usuario.
     pub fn inspect_tile(&mut self, tx: u16, ty: u16) {
-        if tx == 0 || ty == 0 {
+        // el mapa se dibuja bajo la cinta superior: una columna y dos filas de desfase
+        if tx == 0 || ty < 2 {
             return;
         }
-        let mouse_pos = Point::new(tx as usize - 1, ty as usize - 1);
+        let mouse_pos = Point::new(tx as usize - 1, ty as usize - 2);
         if mouse_pos.y >= self.map.len() || mouse_pos.x >= self.map[0].len() {
             return;
         }
@@ -716,6 +768,9 @@ impl App {
             inventory: self.inventory.clone(),
             seed: self.seed,
             depth: self.depth,
+            hero_voice: self.hero_voice,
+            hero_max_voice: self.hero_max_voice,
+            turns: self.turns,
         };
 
         let json = serde_json::to_string_pretty(&save_data)?;
@@ -736,10 +791,16 @@ impl App {
         let mut bestiary_state = ListState::default();
         bestiary_state.select(Some(0));
 
+        let mut options_state = ListState::default();
+        options_state.select(Some(0));
+
         let mut app = App {
             hero_pos: save_data.hero_pos,
             hero_hp: save_data.hero_hp,
             hero_max_hp: save_data.hero_max_hp,
+            hero_voice: save_data.hero_voice,
+            hero_max_voice: save_data.hero_max_voice,
+            turns: save_data.turns,
             equipped_weapon: save_data.equipped_weapon,
             logs: save_data.logs,
             map: save_data.map,
@@ -757,11 +818,91 @@ impl App {
             state: GameState::Playing,
             title_menu_state,
             bestiary_state,
+            options_state,
+            settings: Settings::load(crate::settings::RUTA_AJUSTES),
             rng,
         };
 
         app.add_log("> Partida cargada exitosamente.".into(), LogType::Info);
         Ok(app)
+    }
+
+    /// Alzar la voz: los muertos no esperan que hables.
+    ///
+    /// Cuesta 3 de voz y deja quietas a las criaturas que te están viendo. No
+    /// te salva de lo que ya tenés encima: a menos de 4 casillas vuelven a
+    /// despertar en su próximo turno.
+    pub fn raise_voice(&mut self) -> bool {
+        if self.hero_voice < 3 {
+            self.add_log(
+                "No te queda voz suficiente para hablar.".into(),
+                LogType::Warning,
+            );
+            return false;
+        }
+
+        let mut alcanzadas = 0;
+        for e in self.entities.iter_mut() {
+            if let EntityType::Mob { state, .. } = &mut e.e_type {
+                if self.visible[e.pos.y][e.pos.x] && *state != EnemyState::Asleep {
+                    *state = EnemyState::Asleep;
+                    alcanzadas += 1;
+                }
+            }
+        }
+        self.hero_voice -= 3;
+
+        if alcanzadas > 0 {
+            self.add_log(
+                format!("ALZÁS LA VOZ. {} se detienen a escuchar.", alcanzadas),
+                LogType::Whisper,
+            );
+        } else {
+            self.add_log("ALZÁS LA VOZ. Nadie contesta.".into(), LogType::Whisper);
+        }
+        true
+    }
+
+    /// Avanza el reloj del piso. La penumbra desgasta la voz de a poco.
+    pub fn tick_turn(&mut self) {
+        self.turns = self.turns.wrapping_add(1);
+        if self.turns % 80 == 0 && self.hero_voice > 0 {
+            self.hero_voice -= 1;
+            self.add_log("La penumbra se te lleva una voz.".into(), LogType::Warning);
+        }
+    }
+
+    /// Lo que el héroe tiene a la vista, de lo más cerca a lo más lejos.
+    pub fn entidades_cercanas(&self, tope: usize) -> Vec<(char, Color, String, usize)> {
+        let mut cerca: Vec<(char, Color, String, usize)> = self
+            .entities
+            .iter()
+            .filter(|e| self.visible[e.pos.y][e.pos.x])
+            .map(|e| {
+                let dx = (e.pos.x as isize - self.hero_pos.x as isize).abs();
+                let dy = (e.pos.y as isize - self.hero_pos.y as isize).abs();
+                (e.glyph, e.color, e.name.clone(), dx.max(dy) as usize)
+            })
+            .collect();
+        cerca.sort_by(|a, b| a.3.cmp(&b.3).then(a.2.cmp(&b.2)));
+        cerca.truncate(tope);
+        cerca
+    }
+
+    /// Lo que no se mueve, y por lo tanto se puede recordar en el mapa.
+    pub fn es_estatico(e_type: &EntityType) -> bool {
+        matches!(
+            e_type,
+            EntityType::TalkingWall { .. } | EntityType::EchoAltar { .. } | EntityType::Chest { .. }
+        )
+    }
+
+    /// Lee lo mínimo de una partida guardada sin cargarla entera:
+    /// piso, alma, alma máxima y semilla.
+    pub fn peek_save(ruta: &str) -> Option<(u32, i32, i32, u64)> {
+        let contenido = std::fs::read_to_string(ruta).ok()?;
+        let datos: SaveData = serde_json::from_str(&contenido).ok()?;
+        Some((datos.depth, datos.hero_hp, datos.hero_max_hp, datos.seed))
     }
 
     /// Transforma los muros básicos en glifos de dibujo de caja para una mejor estética.
