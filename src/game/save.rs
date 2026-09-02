@@ -75,6 +75,14 @@ impl App {
 
     /// Lee lo mínimo de una partida guardada sin cargarla entera:
     /// piso, alma, alma máxima y semilla.
+    /// Borra la partida guardada.
+    ///
+    /// La corrida es de ida: morir —o llegar al final— disuelve el fragmento.
+    /// Que no exista el archivo no es un error, es el caso normal.
+    pub fn borrar_save(ruta: &str) {
+        let _ = std::fs::remove_file(ruta);
+    }
+
     pub fn peek_save(ruta: &str) -> Option<(u32, i32, i32, u64)> {
         let contenido = std::fs::read_to_string(ruta).ok()?;
         let datos: SaveData = serde_json::from_str(&contenido).ok()?;

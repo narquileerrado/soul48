@@ -30,6 +30,8 @@ pub enum GameState {
     TitleScreen,
     Playing,
     GameOver,
+    /// El Archidemonio cayó: la corrida terminó y terminó bien.
+    Victory,
     Bestiary,
     Options,
 }

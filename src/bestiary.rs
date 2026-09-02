@@ -116,6 +116,10 @@ pub static BESTIARIO: [BestiaryEntry; 5] = [
     },
 ];
 
+/// El jefe final. Su caída termina la corrida, así que el nombre lo consultan
+/// tanto la generación del piso 48 como `reap_dead`.
+pub const ARCHIDEMONIO: &str = "ARCHIDEMONIO DEL SILENCIO";
+
 /// Experiencia que deja una criatura, buscada por el nombre con el que aparece
 /// en el mapa. Los jefes no están en el compendio y tienen su propia tabla.
 pub fn xp_de(nombre: &str) -> u32 {
@@ -123,7 +127,7 @@ pub fn xp_de(nombre: &str) -> u32 {
         return e.xp;
     }
     match nombre {
-        "ARCHIDEMONIO DEL SILENCIO" => 500,
+        ARCHIDEMONIO => 500,
         n if n.starts_with("Guardián") => 80,
         _ => 15,
     }

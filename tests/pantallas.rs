@@ -220,3 +220,49 @@ fn el_menu_principal_anuncia_el_ultimo_fragmento() {
         "no se ve la semilla del fragmento"
     );
 }
+
+/// La pantalla de victoria existe y dice hasta dónde llegaste.
+#[test]
+fn la_pantalla_de_victoria_celebra_el_final() {
+    use soul48::ui::victory_ui;
+
+    let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+    let mut app = partida();
+    app.state = GameState::Victory;
+    app.depth = 48;
+    terminal.draw(|f| victory_ui(f, &app)).unwrap();
+
+    let pantalla = texto(&terminal);
+    assert!(pantalla.contains("EL ORIGEN"));
+    assert!(pantalla.contains("HAS RECUPERADO TU VOZ"));
+    assert!(pantalla.contains("PISO ALCANZADO"));
+    assert!(
+        pantalla.contains("SEMILLA"),
+        "falta la semilla de la corrida"
+    );
+}
+
+/// La derrota avisa que el fragmento se disuelve: la corrida es de ida.
+#[test]
+fn la_derrota_avisa_que_no_hay_vuelta() {
+    let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+    let mut app = partida();
+    app.player.hp = 0;
+    app.state = GameState::GameOver;
+    terminal.draw(|f| game_over_ui(f, &app)).unwrap();
+
+    assert!(texto(&terminal).contains("El fragmento se disuelve"));
+}
+
+/// Las dos pantallas de cierre también aguantan una terminal chica.
+#[test]
+fn el_cierre_aguanta_una_terminal_chica() {
+    use soul48::ui::victory_ui;
+
+    for (ancho, alto) in [(80, 24), (60, 20), (40, 15)] {
+        let mut terminal = Terminal::new(TestBackend::new(ancho, alto)).unwrap();
+        let app = partida();
+        terminal.draw(|f| game_over_ui(f, &app)).unwrap();
+        terminal.draw(|f| victory_ui(f, &app)).unwrap();
+    }
+}

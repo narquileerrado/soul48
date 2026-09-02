@@ -488,3 +488,86 @@ fn una_partida_larga_mantiene_los_invariantes() {
         }
     }
 }
+
+/// Matar al Archidemonio termina la corrida, y la termina bien.
+#[test]
+fn matar_al_archidemonio_gana_la_partida() {
+    use soul48::app::GameState;
+    use soul48::bestiary::ARCHIDEMONIO;
+
+    let mut app = App::arena(31);
+    let al_lado = Point::new(app.player.pos.x + 1, app.player.pos.y);
+    // con 1 de vida cae de un golpe, sea cual sea la tirada del arma
+    app.entities
+        .push(mob(al_lado, ARCHIDEMONIO, 1, (8, 16), 0, EnemyAI::Melee));
+
+    assert_eq!(app.state, GameState::Playing);
+    app.try_move(1, 0);
+
+    assert_eq!(
+        app.state,
+        GameState::Victory,
+        "el Archidemonio cayó y la partida siguió como si nada"
+    );
+    assert!(
+        !app.entities.iter().any(|e| e.name == ARCHIDEMONIO),
+        "el Archidemonio sigue en el mapa"
+    );
+}
+
+/// El jefe final también cae por magia, y también termina la corrida.
+#[test]
+fn el_archidemonio_tambien_cae_por_pergamino() {
+    use soul48::app::GameState;
+    use soul48::bestiary::ARCHIDEMONIO;
+
+    let mut app = App::arena(32);
+    let cerca = Point::new(app.player.pos.x + 2, app.player.pos.y);
+    app.entities
+        .push(mob(cerca, ARCHIDEMONIO, 5, (8, 16), 0, EnemyAI::Melee));
+    app.inventory.push((
+        objeto(
+            Point::new(0, 0),
+            "Pergamino de Rayo",
+            EntityType::Scroll {
+                scroll_type: ScrollType::Lightning,
+            },
+        ),
+        1,
+    ));
+
+    app.use_item(0);
+    assert_eq!(app.state, GameState::Victory);
+}
+
+/// El descenso deja un punto de control cargable, y morir lo disuelve.
+#[test]
+fn el_fragmento_se_guarda_al_bajar_y_se_disuelve_al_morir() {
+    let ruta = "target/test_permadeath.json";
+    App::borrar_save(ruta);
+
+    let mut app = App::new(Some(41), None, None, 1, None);
+    app.start_new_game();
+    app.descend();
+    app.save_to_file(ruta).expect("no se pudo guardar");
+
+    let (piso, _, _, _) = App::peek_save(ruta).expect("el punto de control no quedó");
+    assert_eq!(piso, 2, "el punto de control no guardó el piso nuevo");
+    let recuperada = App::load_from_file(ruta).expect("no se pudo recargar");
+    assert_eq!(recuperada.depth, 2);
+
+    App::borrar_save(ruta);
+    assert!(
+        App::peek_save(ruta).is_none(),
+        "el fragmento sobrevivió a la muerte"
+    );
+}
+
+/// Borrar dos veces no es un error: que no exista es el caso normal.
+#[test]
+fn borrar_un_fragmento_que_no_esta_no_rompe() {
+    let ruta = "target/test_inexistente.json";
+    App::borrar_save(ruta);
+    App::borrar_save(ruta);
+    assert!(App::peek_save(ruta).is_none());
+}

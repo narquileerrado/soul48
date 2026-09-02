@@ -10,7 +10,7 @@ use soul48::input::{self, AccionAjustes, AccionDescenso, AccionFin, AccionJuego,
 use soul48::menus::Menus;
 use soul48::settings::{AJUSTES, RUTA_AJUSTES};
 use soul48::title::{self, MainMenuOption};
-use soul48::ui::{bestiary_ui, game_over_ui, options_ui, ui};
+use soul48::ui::{bestiary_ui, game_over_ui, options_ui, ui, victory_ui};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -71,6 +71,9 @@ fn correr<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<()
                 GameState::GameOver => {
                     terminal.draw(|f| game_over_ui(f, &app))?;
                 }
+                GameState::Victory => {
+                    terminal.draw(|f| victory_ui(f, &app))?;
+                }
                 GameState::Bestiary => {
                     terminal.draw(|f| bestiary_ui(f, &mut menus.bestiario, &app.settings))?;
                 }
@@ -95,7 +98,7 @@ fn correr<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<()
                     GameState::Bestiary => pantalla_compendio(&mut app, &mut menus, key.code),
                     GameState::Options => pantalla_ajustes(&mut app, &mut menus, key.code),
                     GameState::Playing => pantalla_juego(&mut app, key.code),
-                    GameState::GameOver => pantalla_fin(&mut app, key.code),
+                    GameState::GameOver | GameState::Victory => pantalla_fin(&mut app, key.code),
                 };
                 if !seguir {
                     return Ok(());
@@ -191,6 +194,14 @@ fn pantalla_juego(app: &mut App, code: KeyCode) -> bool {
             Some(AccionDescenso::Bajar) => {
                 app.confirm_descent();
                 app.descend();
+                // El piso nuevo es el punto de control. La corrida es larga y
+                // sin esto se guardaba sólo al salir con Q.
+                if let Err(e) = app.save_to_file(RUTA_PARTIDA) {
+                    app.add_log(
+                        format!("> El fragmento no pudo asentarse: {}", e),
+                        LogType::Warning,
+                    );
+                }
             }
             Some(AccionDescenso::Quedarse) => {
                 app.confirm_descent();
@@ -244,6 +255,11 @@ fn pantalla_juego(app: &mut App, code: KeyCode) -> bool {
                 app.state = GameState::GameOver;
             }
         }
+        // Morir o llegar al final disuelven el fragmento: no se recarga la
+        // partida anterior para volver a intentar el mismo piso.
+        if matches!(app.state, GameState::GameOver | GameState::Victory) {
+            App::borrar_save(RUTA_PARTIDA);
+        }
     }
     true
 }
@@ -251,6 +267,7 @@ fn pantalla_juego(app: &mut App, code: KeyCode) -> bool {
 fn pantalla_fin(app: &mut App, code: KeyCode) -> bool {
     match input::fin(code) {
         Some(AccionFin::Reiniciar) => {
+            App::borrar_save(RUTA_PARTIDA);
             *app = App::new(None, None, None, 1, None);
             app.start_new_game();
         }

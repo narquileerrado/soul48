@@ -85,6 +85,16 @@ impl App {
         for nombre in caidos {
             self.add_log(format!("> {} eliminada.", nombre), LogType::Combat);
             self.add_xp(crate::bestiary::xp_de(&nombre));
+
+            // Es el único lugar donde muere algo, así que es acá donde se
+            // entera el juego de que la corrida terminó bien.
+            if nombre == crate::bestiary::ARCHIDEMONIO {
+                self.add_log(
+                    "> EL SILENCIO SE QUIEBRA. Tu voz vuelve a ser tuya.".into(),
+                    LogType::Whisper,
+                );
+                self.state = GameState::Victory;
+            }
         }
     }
 }

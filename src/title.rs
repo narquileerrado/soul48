@@ -27,7 +27,7 @@ const LOGO: &str = r#"
 
 pub const SUBTITLE: &str = "--- THE TALKING DEAD ---";
 
-pub const STORY_SUMMARY: &str = "Despiertas en la penumbra del piso 48. No eres más que un eco de quien fuiste, un alma atada a un cuerpo que ya no respira. El demonio que te arrebató la vida te observa desde las profundidades, burlándose de tu silencio. Para recuperar tu voz y tu destino, debes ascender. Pero ten cuidado: en este dominio, hasta las paredes tienen algo que decir, y la muerte es solo el comienzo de una nueva conversación.";
+pub const STORY_SUMMARY: &str = "Despiertas en el umbral, sin voz. No eres más que un eco de quien fuiste, un alma atada a un cuerpo que ya no respira. Cuarenta y ocho pisos más abajo, el Archidemonio del Silencio guarda lo que te arrebató y se burla de que no puedas nombrarlo. Para recuperar tu voz y tu destino, hay que bajar hasta él. Pero ten cuidado: en este dominio, hasta las paredes tienen algo que decir, y la muerte es solo el comienzo de una nueva conversación.";
 
 /// Datos mínimos de la partida guardada: piso, alma, alma máxima y semilla.
 pub type Fragmento = Option<(u32, i32, i32, u64)>;
@@ -55,7 +55,7 @@ impl MainMenuOption {
     }
     pub fn as_str(&self) -> &str {
         match self {
-            MainMenuOption::StartGame => "ASCENDER AL ORIGEN",
+            MainMenuOption::StartGame => "DESCENDER AL ABISMO",
             MainMenuOption::Bestiary => "COMPENDIO DE SOMBRAS",
             MainMenuOption::LoadGame => "RECOGER FRAGMENTOS",
             MainMenuOption::Options => "SINTONIZAR ALMA",
@@ -64,7 +64,7 @@ impl MainMenuOption {
     }
     pub fn description(&self) -> &str {
         match self {
-            MainMenuOption::StartGame => "Inicia tu ascenso desde el piso 1. Recupera tu alma.",
+            MainMenuOption::StartGame => "Bajá desde el umbral hasta el piso 48. Recuperá tu voz.",
             MainMenuOption::Bestiary => "Estudia a los moradores de las profundidades.",
             MainMenuOption::LoadGame => "Continúa una partida guardada anteriormente.",
             MainMenuOption::Options => "Sintoniza la penumbra, los glifos y el guardado.",
@@ -269,7 +269,7 @@ pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajus
     /* --- pie --- */
     let pie = vec![
         Line::from(Span::styled(
-            "Soul 48: The Talking Dead — v0.2.0",
+            concat!("Soul 48: The Talking Dead — v", env!("CARGO_PKG_VERSION")),
             Style::default().fg(theme::CENIZA_HONDA),
         )),
         Line::from(vec![

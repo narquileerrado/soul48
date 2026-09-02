@@ -204,7 +204,7 @@ impl MapBuilder {
                 pos: boss_pos,
                 glyph: 'D',
                 color: crate::theme::VIOLETA,
-                name: "ARCHIDEMONIO DEL SILENCIO".into(),
+                name: bestiary::ARCHIDEMONIO.into(),
                 e_type: EntityType::Mob {
                     hp: 150,
                     max_hp: 150,
@@ -366,7 +366,7 @@ impl MapBuilder {
             let wall_pos = Point::new(wall_room.x1, wall_room.y1);
             let whispers = [
                 "Recuerda... tu voz fue lo primero que te robaron.",
-                "En el piso 48, el Archidemonio aguarda tu ascenso.",
+                "En el piso 48, el Archidemonio aguarda con tu voz en la boca.",
                 "Los cofres dorados a veces respiran cuando no los miras.",
                 "Ofrecer tu sangre al Altar de Ecos revelará la verdad oculta.",
             ];

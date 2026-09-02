@@ -2,13 +2,11 @@
 
 use super::widgets::*;
 use crate::app::{App, Point};
-use crate::arte;
 use crate::settings::Glifos;
-use crate::sprite::Paleta;
 use crate::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
         block::{Position, Title},
@@ -582,112 +580,5 @@ fn modal_descenso(f: &mut Frame, app: &App, area: Rect) {
                 .border_style(marco(true)),
         ),
         zona,
-    );
-}
-
-/* ───────────────────────────── fin de la partida ───────────────────────────── */
-
-/// Muestra la pantalla de derrota superpuesta al estado final del mapa.
-pub fn game_over_ui(f: &mut Frame, app: &App) {
-    ui(f, app);
-
-    let mapa = area_mapa(app, f.size());
-    // la ilustración sólo si el mapa da: si no, el modal chico de siempre
-    let con_arte = mapa.height >= 22 && mapa.width >= 56;
-    let zona = if con_arte {
-        rect_centrado(56, 22, mapa)
-    } else {
-        rect_centrado(52, 13, mapa)
-    };
-    f.render_widget(Clear, zona);
-
-    let rojo = Style::default().fg(theme::ROJO_ALTAR);
-    let texto = vec![
-        Line::from(""),
-        Line::from(Span::styled("HAS CAÍDO", rojo.add_modifier(Modifier::BOLD))),
-        Line::from(""),
-        Line::from(Span::styled(
-            "El archidemonio ha consumido lo poco que",
-            Style::default().fg(theme::HUESO),
-        )),
-        Line::from(Span::styled(
-            "quedaba de tu alma en este piso.",
-            Style::default().fg(theme::HUESO),
-        )),
-        Line::from(""),
-        Line::from(Span::styled(
-            "«...y sin embargo, seguís hablando.»",
-            Style::default()
-                .fg(theme::VIOLETA)
-                .add_modifier(Modifier::ITALIC),
-        )),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("PISO ALCANZADO  ", Style::default().fg(theme::CENIZA)),
-            Span::styled(
-                format!("{}", app.depth),
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("     NIVEL  ", Style::default().fg(theme::CENIZA)),
-            Span::styled(
-                format!("{}", app.player.level),
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "R",
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                " volver a empezar      ",
-                Style::default().fg(theme::CENIZA_HONDA),
-            ),
-            Span::styled(
-                "Q",
-                Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" silencio", Style::default().fg(theme::CENIZA_HONDA)),
-        ]),
-    ];
-
-    let bloque = Block::default()
-        .borders(Borders::ALL)
-        .title(Span::styled(
-            " FIN DE LA PARTIDA ",
-            rojo.add_modifier(Modifier::BOLD),
-        ))
-        .title_alignment(Alignment::Center)
-        .border_style(rojo);
-    let interior = bloque.inner(zona);
-    f.render_widget(bloque, zona);
-
-    let area_texto = if con_arte {
-        let partes = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(arte::CALAVERA.alto_en_celdas()),
-                Constraint::Min(0),
-            ])
-            .split(interior);
-        let paleta = Paleta::de(theme::HUESO, theme::ROJO_ALTAR);
-        f.render_widget(
-            Paragraph::new(arte::CALAVERA.lineas(
-                &paleta,
-                Color::Reset,
-                app.settings.glifos == Glifos::Ascii,
-            ))
-            .alignment(Alignment::Center),
-            partes[0],
-        );
-        partes[1]
-    } else {
-        interior
-    };
-
-    f.render_widget(
-        Paragraph::new(texto).alignment(Alignment::Center),
-        area_texto,
     );
 }
