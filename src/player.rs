@@ -6,7 +6,7 @@
 //! perdían el nivel y el equipo al bajar de piso—. Acá el héroe es un solo
 //! valor que se mueve completo.
 
-use crate::app::{Point, StatusEffect};
+use crate::app::{Point, StatusEffect, StatusEffectType};
 use crate::balance;
 use serde::{Deserialize, Serialize};
 
@@ -149,6 +149,11 @@ impl Player {
     /// Daño que llega al héroe después de la defensa del equipo.
     pub fn dano_recibido(&self, bruto: i32) -> i32 {
         (bruto - self.defensa_total()).max(balance::combate::DANO_MINIMO)
+    }
+
+    /// Si el héroe carga un efecto de estado determinado.
+    pub fn tiene(&self, efecto: &StatusEffectType) -> bool {
+        self.status_effects.iter().any(|e| &e.effect_type == efecto)
     }
 
     /// La cordura nunca puede pasarse de su techo actual.

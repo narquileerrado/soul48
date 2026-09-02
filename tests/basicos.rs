@@ -363,3 +363,96 @@ fn test_floor_48_boss_encounter() {
         .any(|e| e.name == "ARCHIDEMONIO DEL SILENCIO");
     assert!(boss_exists);
 }
+
+/* ───────────────────────────── los cuatro tramos ───────────────────────────── */
+
+/// Los 48 pisos tienen que estar cubiertos, sin huecos ni solapamientos.
+#[test]
+fn los_tramos_cubren_el_descenso_entero() {
+    use soul48::world::tramo::{self, TRAMOS};
+
+    for piso in 1..=48u32 {
+        let t = tramo::de_piso(piso);
+        assert!(
+            piso >= t.rango.0 && piso <= t.rango.1,
+            "el piso {} cayó en «{}», que va del {} al {}",
+            piso,
+            t.nombre,
+            t.rango.0,
+            t.rango.1
+        );
+    }
+
+    // sin huecos ni solapamientos entre tramos consecutivos
+    assert_eq!(TRAMOS[0].rango.0, 1, "el descenso no empieza en el piso 1");
+    assert_eq!(
+        TRAMOS[TRAMOS.len() - 1].rango.1,
+        48,
+        "el descenso no termina en el piso 48"
+    );
+    for par in TRAMOS.windows(2) {
+        assert_eq!(
+            par[1].rango.0,
+            par[0].rango.1 + 1,
+            "«{}» y «{}» no se tocan",
+            par[0].nombre,
+            par[1].nombre
+        );
+    }
+}
+
+/// Un tramo sin criaturas con peso deja pisos desiertos.
+#[test]
+fn cada_tramo_tiene_con_que_poblarse() {
+    use soul48::bestiary::BESTIARIO;
+    use soul48::world::tramo::TRAMOS;
+
+    for (i, t) in TRAMOS.iter().enumerate() {
+        let pool: Vec<&str> = BESTIARIO
+            .iter()
+            .filter(|e| e.spawn_weight[i] > 0)
+            .map(|e| e.short_name)
+            .collect();
+        assert!(
+            pool.len() >= 3,
+            "«{}» sólo tiene {:?} para poblarse",
+            t.nombre,
+            pool
+        );
+    }
+}
+
+/// Cada tramo tiene su paleta y sus voces: si dos comparten todo, no hay tramos.
+#[test]
+fn cada_tramo_tiene_identidad_propia() {
+    use soul48::world::tramo::TRAMOS;
+
+    for t in TRAMOS.iter() {
+        assert!(!t.susurros.is_empty(), "«{}» no tiene voces", t.nombre);
+        assert!(!t.jefe.is_empty(), "«{}» no tiene Guardián", t.nombre);
+        assert!(!t.entrada.is_empty(), "«{}» no se presenta", t.nombre);
+    }
+    for par in TRAMOS.windows(2) {
+        assert_ne!(
+            par[0].muro, par[1].muro,
+            "«{}» y «{}» pintan los muros igual",
+            par[0].nombre, par[1].nombre
+        );
+        assert_ne!(par[0].jefe, par[1].jefe);
+    }
+}
+
+/// El último piso de cada tramo lleva su Guardián nombrado.
+#[test]
+fn los_guardianes_cierran_su_tramo() {
+    use soul48::world::tramo;
+
+    for piso in 1..=48u32 {
+        assert_eq!(
+            tramo::cierra_tramo(piso),
+            matches!(piso, 12 | 24 | 36 | 48),
+            "el piso {} no coincide con el fin de tramo",
+            piso
+        );
+    }
+}

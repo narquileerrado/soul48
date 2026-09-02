@@ -30,6 +30,28 @@ impl App {
             }
         }
 
+        // Los mismos efectos, del otro lado. `Entity.status_effects` estaba
+        // declarado y serializado desde siempre y no lo tickeaba nadie: un
+        // enemigo envenenado no se moría nunca.
+        for entidad in &mut self.entities {
+            if entidad.status_effects.is_empty() {
+                continue;
+            }
+            let mut dano = 0;
+            entidad.status_effects.retain_mut(|ef| {
+                dano += ef.damage_per_turn.max(0);
+                ef.duration = ef.duration.saturating_sub(1);
+                ef.duration > 0
+            });
+            if dano > 0 {
+                if let EntityType::Mob { ref mut hp, .. } = entidad.e_type {
+                    *hp -= dano;
+                }
+            }
+        }
+        // lo que se muera de veneno cae acá, con su experiencia
+        self.reap_dead();
+
         // Decrementar invisibilidad y parpadeo de daño
         if self.player.damage_flash_turns > 0 {
             self.player.damage_flash_turns -= 1;
@@ -151,6 +173,29 @@ impl App {
                             }
                             self.player.hp = (self.player.hp - dmg).max(0);
                             self.player.damage_flash_turns = 1;
+
+                            // la serpiente envenena, el heraldo ciega: sale del
+                            // catálogo, no de un `match` sobre el nombre
+                            if dmg > 0 {
+                                if let Some(efecto) = crate::bestiary::efecto_de(&name) {
+                                    if !self
+                                        .player
+                                        .status_effects
+                                        .iter()
+                                        .any(|e| e.effect_type == efecto)
+                                    {
+                                        messages.push((
+                                            format!("> {} te deja su marca.", name),
+                                            LogType::Warning,
+                                        ));
+                                        self.player.status_effects.push(StatusEffect {
+                                            effect_type: efecto.clone(),
+                                            duration: balance::efectos::duracion(&efecto),
+                                            damage_per_turn: balance::efectos::dano(&efecto),
+                                        });
+                                    }
+                                }
+                            }
                         }
                     } else {
                         match ai {

@@ -4,6 +4,7 @@ use super::widgets::*;
 use crate::app::{App, Point};
 use crate::settings::Glifos;
 use crate::theme;
+use crate::world::tramo;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -145,6 +146,7 @@ fn cinta(f: &mut Frame, app: &App, area: Rect) {
 /// El mapa. Lo visible en color pleno, lo recordado apagado pero con su propio tono.
 fn mapa(f: &mut Frame, app: &App, area: Rect, glifos: Glifos) {
     let brillo = app.settings.penumbra;
+    let tramo = tramo::de_piso(app.depth);
     // una tabla por cuadro en vez de recorrer las entidades por cada celda
     let indice = app.indice_entidades();
     let mut lineas: Vec<Line> = Vec::with_capacity(app.map.len());
@@ -173,7 +175,7 @@ fn mapa(f: &mut Frame, app: &App, area: Rect, glifos: Glifos) {
                 } else {
                     spans.push(Span::styled(
                         glifo_tile(tile, glifos).to_string(),
-                        Style::default().fg(color_tile(tile)),
+                        Style::default().fg(color_tile(tile, tramo)),
                     ));
                 }
             } else if app.explored[y][x] {
@@ -189,7 +191,7 @@ fn mapa(f: &mut Frame, app: &App, area: Rect, glifos: Glifos) {
                     )),
                     None => spans.push(Span::styled(
                         glifo_tile(tile, glifos).to_string(),
-                        Style::default().fg(theme::recordado(color_tile(tile), brillo)),
+                        Style::default().fg(theme::recordado(color_tile(tile, tramo), brillo)),
                     )),
                 }
             } else {
@@ -228,7 +230,7 @@ fn mapa(f: &mut Frame, app: &App, area: Rect, glifos: Glifos) {
         Paragraph::new(lineas).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(Span::styled(" LA PENUMBRA ", titulo(true)))
+                .title(Span::styled(format!(" {} ", tramo.nombre), titulo(true)))
                 .title(
                     Title::from(Line::from(leyenda))
                         .position(Position::Bottom)

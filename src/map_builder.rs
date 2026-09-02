@@ -1,7 +1,9 @@
 use crate::app::{
     EnemyAI, EnemyState, Entity, EntityType, HazardType, Point, ScrollType, SpecialRoomType,
 };
+use crate::balance;
 use crate::bestiary;
+use crate::world::tramo;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::collections::HashSet;
@@ -47,6 +49,7 @@ impl MapBuilder {
     /// Construye un nuevo nivel utilizando una semilla aleatoria y ajustando la dificultad según la profundidad.
     pub fn new(seed: u64, depth: u32) -> Self {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
+        let tramo = tramo::de_piso(depth);
         let map_width = 60;
         let map_height = 25;
         let mut map = vec![vec!['#'; map_width]; map_height];
@@ -197,8 +200,10 @@ impl MapBuilder {
             }
         }
 
-        // Colocación especial de Boss en el Piso 48 (Archidemonio) o en Pisos Múltiplos de 5
-        if depth == 48 && !rooms.is_empty() {
+        // Un jefe cada seis pisos. Los de fin de tramo llevan el nombre del
+        // tramo y lo cierran; los intermedios son un eco más flojo. Antes eran
+        // nueve Guardianes con nombre autogenerado y ninguna identidad.
+        if depth == balance::descenso::PISO_FINAL && !rooms.is_empty() {
             let boss_pos = rooms.last().unwrap().center();
             entities.push(Entity {
                 pos: boss_pos,
@@ -217,20 +222,28 @@ impl MapBuilder {
                 },
                 status_effects: Vec::new(),
             });
-        } else if depth.is_multiple_of(5) && rooms.len() > 1 {
+        } else if depth.is_multiple_of(balance::descenso::CADA_CUANTOS_JEFE) && rooms.len() > 1 {
             let boss_pos = rooms.last().unwrap().center();
+            let cierra = tramo::cierra_tramo(depth);
+            // el Guardián del tramo pega más fuerte que el eco de mitad
+            let escala = if cierra { 1.0 } else { 0.7 };
+            let vida = ((50 + depth as i32 * 3) as f32 * escala) as i32;
             entities.push(Entity {
                 pos: boss_pos,
                 glyph: 'B',
                 color: crate::theme::ROJO_ALTAR,
-                name: format!("Guardián del Piso {}", depth),
+                name: if cierra {
+                    tramo.jefe.to_string()
+                } else {
+                    format!("Eco del {}", tramo.jefe)
+                },
                 e_type: EntityType::Mob {
-                    hp: 50 + (depth as i32 * 3),
-                    max_hp: 50 + (depth as i32 * 3),
+                    hp: vida,
+                    max_hp: vida,
                     state: EnemyState::Aggressive,
                     ai: EnemyAI::Melee,
-                    min_dmg: 5 + (depth as i32 / 2),
-                    max_dmg: 10 + (depth as i32 / 2),
+                    min_dmg: ((5 + depth as i32 / 2) as f32 * escala) as i32,
+                    max_dmg: ((10 + depth as i32 / 2) as f32 * escala) as i32,
                     defense: 4 + (depth as i32 / 5),
                     pacified: false,
                 },
@@ -364,13 +377,10 @@ impl MapBuilder {
         if rooms.len() > 3 {
             let wall_room = &rooms[3];
             let wall_pos = Point::new(wall_room.x1, wall_room.y1);
-            let whispers = [
-                "Recuerda... tu voz fue lo primero que te robaron.",
-                "En el piso 48, el Archidemonio aguarda con tu voz en la boca.",
-                "Los cofres dorados a veces respiran cuando no los miras.",
-                "Ofrecer tu sangre al Altar de Ecos revelará la verdad oculta.",
-            ];
-            let msg = whispers[rng.gen_range(0..whispers.len())].to_string();
+            // cada tramo tiene sus propias voces: la pared del piso 3 y la del
+            // piso 40 ya no dicen lo mismo
+            let susurros = tramo.susurros;
+            let msg = susurros[rng.gen_range(0..susurros.len())].to_string();
 
             entities.push(Entity {
                 pos: wall_pos,
@@ -537,17 +547,24 @@ impl MapBuilder {
     /// Las estadísticas salen de `bestiary::BESTIARIO`: son las mismas que
     /// muestra el compendio, no una copia que puede quedar desfasada.
     fn spawn_random_enemy(rng: &mut ChaCha8Rng, pos: Point, depth: u32) -> Entity {
-        let catalogo = &bestiary::BESTIARIO;
-        let peso_total: i32 = catalogo.iter().map(|e| e.spawn_weight).sum();
+        // El pool depende del tramo: la Rata no llega al Abismo y el Heraldo
+        // no sube a las Criptas.
+        let t = tramo::indice_de_piso(depth);
+        let candidatas: Vec<&bestiary::BestiaryEntry> = bestiary::BESTIARIO
+            .iter()
+            .filter(|e| e.spawn_weight[t] > 0)
+            .collect();
+
+        let peso_total: i32 = candidatas.iter().map(|e| e.spawn_weight[t]).sum();
         let mut tirada = rng.gen_range(0..peso_total);
 
-        let mut elegida = &catalogo[0];
-        for criatura in catalogo.iter() {
-            if tirada < criatura.spawn_weight {
+        let mut elegida = candidatas[0];
+        for criatura in candidatas.iter() {
+            if tirada < criatura.spawn_weight[t] {
                 elegida = criatura;
                 break;
             }
-            tirada -= criatura.spawn_weight;
+            tirada -= criatura.spawn_weight[t];
         }
 
         let dificultad = (depth as i32 - 1) * 2;

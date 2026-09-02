@@ -571,3 +571,118 @@ fn borrar_un_fragmento_que_no_esta_no_rompe() {
     App::borrar_save(ruta);
     assert!(App::peek_save(ruta).is_none());
 }
+
+/// Cada tramo genera criaturas de su pool y ninguna de otro.
+#[test]
+fn cada_tramo_puebla_con_su_propio_pool() {
+    use soul48::bestiary::BESTIARIO;
+    use soul48::world::tramo;
+
+    // un piso representativo de cada tramo
+    for piso in [3u32, 15, 28, 40] {
+        let t = tramo::indice_de_piso(piso);
+        let mut vistas = std::collections::HashSet::new();
+        for seed in 0..40u64 {
+            for e in MapBuilder::new(seed, piso).entities {
+                if matches!(e.e_type, EntityType::Mob { .. }) {
+                    vistas.insert(e.name.clone());
+                }
+            }
+        }
+        assert!(!vistas.is_empty(), "el piso {} salió desierto", piso);
+
+        for nombre in &vistas {
+            let Some(ficha) = BESTIARIO.iter().find(|b| b.short_name == nombre) else {
+                continue; // los jefes no salen del pool
+            };
+            assert!(
+                ficha.spawn_weight[t] > 0,
+                "«{}» apareció en el piso {}, donde su peso es 0",
+                nombre,
+                piso
+            );
+        }
+    }
+}
+
+/// Un enemigo envenenado se muere solo, y da su experiencia igual.
+#[test]
+fn un_mob_envenenado_muere_solo() {
+    let mut app = App::arena(37);
+    let lejos = Point::new(app.player.pos.x + 5, app.player.pos.y);
+    let mut victima = mob(lejos, "Gnoll", 4, (1, 1), 0, EnemyAI::Stationary);
+    victima.status_effects.push(StatusEffect {
+        effect_type: StatusEffectType::Poison,
+        duration: 5,
+        damage_per_turn: 2,
+    });
+    app.entities.push(victima);
+
+    let xp_antes = app.player.xp;
+    app.process_enemy_turns();
+    app.process_enemy_turns();
+
+    assert!(
+        !app.entities.iter().any(|e| e.name == "Gnoll"),
+        "el veneno no llegó a matarlo"
+    );
+    assert!(
+        app.player.xp > xp_antes,
+        "morir de veneno no dio experiencia"
+    );
+}
+
+/// La ceguera achica el mundo a lo que tenés encima.
+#[test]
+fn la_ceguera_recorta_el_campo_de_vision() {
+    let ver_todo = |cegado: bool| -> usize {
+        let mut app = App::arena(43);
+        if cegado {
+            app.player.status_effects.push(StatusEffect {
+                effect_type: StatusEffectType::Blindness,
+                duration: 4,
+                damage_per_turn: 0,
+            });
+        }
+        app.calculate_fov();
+        app.visible.iter().flatten().filter(|v| **v).count()
+    };
+
+    let normal = ver_todo(false);
+    let cegado = ver_todo(true);
+    assert!(normal > 0);
+    assert!(
+        cegado < normal,
+        "cegado ves {} casillas y normal {}: la ceguera no hace nada",
+        cegado,
+        normal
+    );
+}
+
+/// La serpiente envenena al golpear: el efecto sale del catálogo.
+#[test]
+fn la_serpiente_deja_su_marca() {
+    let mut app = App::arena(47);
+    app.player.stats.agility = 0; // sin esquiva, el golpe entra
+    let al_lado = Point::new(app.player.pos.x + 1, app.player.pos.y);
+    app.entities.push(mob(
+        al_lado,
+        "Serpiente",
+        100,
+        (3, 3),
+        0,
+        EnemyAI::Stationary,
+    ));
+
+    // unos turnos: alcanza para que pegue al menos una vez
+    for _ in 0..5 {
+        app.process_enemy_turns();
+    }
+    assert!(
+        app.player
+            .status_effects
+            .iter()
+            .any(|e| e.effect_type == StatusEffectType::Poison),
+        "la serpiente golpeó y no envenenó"
+    );
+}

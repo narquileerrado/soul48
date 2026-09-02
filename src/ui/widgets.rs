@@ -5,6 +5,7 @@
 use crate::app::{App, LogType, StatusEffectType};
 use crate::settings::Glifos;
 use crate::theme;
+use crate::world::Tramo;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -204,15 +205,19 @@ pub fn glifo_tile(c: char, glifos: Glifos) -> char {
     }
 }
 
-pub fn color_tile(c: char) -> Color {
+/// El color de una casilla según el tramo del descenso en el que estés.
+///
+/// La escalera y las puertas conservan su color en todos los tramos: son
+/// señalización, no ambiente.
+pub fn color_tile(c: char, tramo: &Tramo) -> Color {
     if c == '#' || MUROS.contains(&c) {
-        theme::MURO
+        tramo.muro
     } else if c == '>' {
         theme::ORO
     } else if c == '+' {
         theme::AMBAR
     } else {
-        theme::SUELO
+        tramo.suelo
     }
 }
 

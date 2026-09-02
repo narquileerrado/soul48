@@ -319,6 +319,14 @@ impl App {
             format!("> HAS DESCENDIDO AL NIVEL {}", profundidad),
             LogType::Info,
         );
+
+        // al cruzar a un tramo nuevo, el descenso se presenta
+        let antes = crate::world::tramo::de_piso(profundidad - 1);
+        let ahora = crate::world::tramo::de_piso(profundidad);
+        if !std::ptr::eq(antes, ahora) {
+            abajo.add_log(format!("> {}", ahora.nombre), LogType::Whisper);
+            abajo.add_log(ahora.entrada.to_string(), LogType::Whisper);
+        }
         *self = abajo;
     }
 
@@ -428,10 +436,17 @@ impl App {
     /// umbral; con la cordura entera, devuelve el paso tal cual.
     fn desviar_por_cordura(&mut self, dx: isize, dy: isize) -> (isize, isize) {
         let umbral = balance::cordura::UMBRAL_ALUCINACION;
-        if self.player.sanity >= umbral {
+        // la confusión hace lo mismo que la cordura baja, y se suma a ella
+        let confundido = self.player.tiene(&StatusEffectType::Confusion);
+        if self.player.sanity >= umbral && !confundido {
             return (dx, dy);
         }
-        let caida = (umbral - self.player.sanity.max(0)) as f64 / umbral as f64;
+        let por_cordura = (umbral - self.player.sanity.max(0)).max(0) as f64 / umbral as f64;
+        let caida = if confundido {
+            por_cordura.max(0.6)
+        } else {
+            por_cordura
+        };
         if !self.rng.gen_bool((caida * 0.5).clamp(0.0, 1.0)) {
             return (dx, dy);
         }
@@ -441,7 +456,12 @@ impl App {
         if elegido == (dx, dy) {
             return (dx, dy);
         }
-        self.add_log("> La penumbra te tuerce el paso.".into(), LogType::Whisper);
+        let motivo = if confundido {
+            "> La confusión te tuerce el paso."
+        } else {
+            "> La penumbra te tuerce el paso."
+        };
+        self.add_log(motivo.into(), LogType::Whisper);
         elegido
     }
 

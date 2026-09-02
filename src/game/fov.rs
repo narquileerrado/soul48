@@ -1,6 +1,7 @@
 //! Campo de visión y línea de visión.
 
 use super::*;
+use crate::balance;
 
 impl App {
     /// Calcula el Campo de Visión (FOV) del héroe basado en un radio definido.
@@ -12,10 +13,17 @@ impl App {
                 *val = false;
             }
         }
-        for y in (hy - self.fov_radius)..=(hy + self.fov_radius) {
-            for x in (hx - self.fov_radius)..=(hx + self.fov_radius) {
+        // con los ojos apagados el mundo se achica a lo que tenés encima
+        let radio = if self.player.tiene(&StatusEffectType::Blindness) {
+            self.fov_radius.min(balance::efectos::FOV_CEGADO)
+        } else {
+            self.fov_radius
+        };
+
+        for y in (hy - radio)..=(hy + radio) {
+            for x in (hx - radio)..=(hx + radio) {
                 if self.tile_en(x, y).is_some()
-                    && (x - hx).pow(2) + (y - hy).pow(2) <= self.fov_radius.pow(2)
+                    && (x - hx).pow(2) + (y - hy).pow(2) <= radio.pow(2)
                     && self.has_los((hx, hy), (x, y))
                 {
                     self.visible[y as usize][x as usize] = true;

@@ -94,6 +94,45 @@ pub mod terreno {
     pub const COSTO_ALTAR: i32 = 5;
 }
 
+/// Qué dura y cuánto duele cada efecto de estado.
+pub mod efectos {
+    use crate::app::StatusEffectType;
+
+    /// Turnos que dura cada efecto.
+    pub fn duracion(efecto: &StatusEffectType) -> usize {
+        match efecto {
+            StatusEffectType::Poison => 4,
+            StatusEffectType::Bleed => 3,
+            StatusEffectType::Burn => 2,
+            StatusEffectType::Freeze => 2,
+            StatusEffectType::Confusion => 5,
+            StatusEffectType::Blindness => 4,
+        }
+    }
+
+    /// Daño por turno. Los que no lastiman valen 0: molestan de otra forma.
+    pub fn dano(efecto: &StatusEffectType) -> i32 {
+        match efecto {
+            StatusEffectType::Poison => 2,
+            StatusEffectType::Bleed => 3,
+            StatusEffectType::Burn => 3,
+            StatusEffectType::Freeze | StatusEffectType::Confusion => 0,
+            StatusEffectType::Blindness => 0,
+        }
+    }
+
+    /// Cuánto se achica el campo de visión con los ojos apagados.
+    pub const FOV_CEGADO: isize = 2;
+}
+
+/// La forma del descenso.
+pub mod descenso {
+    /// El último piso: donde espera el Archidemonio.
+    pub const PISO_FINAL: u32 = 48;
+    /// Cada cuántos pisos aparece un jefe.
+    pub const CADA_CUANTOS_JEFE: u32 = 6;
+}
+
 /// Percepción y memoria.
 pub mod percepcion {
     /// Radio del campo de visión del héroe.

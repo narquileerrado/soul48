@@ -38,7 +38,7 @@ fn la_pantalla_de_juego_muestra_sus_paneles() {
     let pantalla = texto(&terminal);
     for esperado in [
         "SOUL 48",
-        "LA PENUMBRA",
+        "LAS CRIPTAS",
         "TU ALMA",
         "LO QUE LLEVÁS PUESTO",
         "LO QUE CARGÁS",
@@ -264,5 +264,55 @@ fn el_cierre_aguanta_una_terminal_chica() {
         let app = partida();
         terminal.draw(|f| game_over_ui(f, &app)).unwrap();
         terminal.draw(|f| victory_ui(f, &app)).unwrap();
+    }
+}
+
+/// Cada tramo pinta el mapa con su propia paleta y se nombra en el panel.
+#[test]
+fn cada_tramo_se_ve_distinto() {
+    use ratatui::style::Color;
+    use soul48::world::tramo::TRAMOS;
+
+    /// Los colores que efectivamente se pintaron en el buffer.
+    fn colores(terminal: &Terminal<TestBackend>) -> std::collections::HashSet<Color> {
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|c| c.fg)
+            .collect()
+    }
+
+    let mut anteriores = None;
+    for t in TRAMOS.iter() {
+        let piso = t.rango.0;
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+        let mut app = App::new(Some(5150), None, None, piso, None);
+        app.start_new_game();
+        terminal.draw(|f| ui(f, &app)).unwrap();
+
+        assert!(
+            texto(&terminal).contains(t.nombre),
+            "el piso {} no se anuncia como «{}»",
+            piso,
+            t.nombre
+        );
+        assert!(
+            colores(&terminal).contains(&t.muro),
+            "el piso {} no usa el muro de «{}»",
+            piso,
+            t.nombre
+        );
+
+        if let Some(previos) = anteriores {
+            assert_ne!(
+                previos,
+                colores(&terminal),
+                "«{}» se ve igual que el tramo anterior",
+                t.nombre
+            );
+        }
+        anteriores = Some(colores(&terminal));
     }
 }

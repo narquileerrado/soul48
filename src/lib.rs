@@ -23,3 +23,4 @@ pub mod sprite;
 pub mod theme;
 pub mod title;
 pub mod ui;
+pub mod world;

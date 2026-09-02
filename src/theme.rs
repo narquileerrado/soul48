@@ -23,6 +23,15 @@ pub const CENIZA_HONDA: Color = Color::Rgb(74, 69, 62);
 pub const MURO: Color = Color::Rgb(111, 106, 97);
 pub const SUELO: Color = Color::Rgb(58, 53, 47);
 pub const PENUMBRA: Color = Color::Rgb(14, 12, 11);
+/* --- paletas de tramo: cada doce pisos el descenso cambia de piel --- */
+/// Las Criptas usan `MURO` y `SUELO`, la paleta base.
+pub const MURO_CATACUMBA: Color = Color::Rgb(96, 108, 99);
+pub const SUELO_CATACUMBA: Color = Color::Rgb(48, 58, 50);
+pub const MURO_ABISMO: Color = Color::Rgb(88, 82, 112);
+pub const SUELO_ABISMO: Color = Color::Rgb(42, 38, 58);
+pub const MURO_SILENCIO: Color = Color::Rgb(120, 96, 104);
+pub const SUELO_SILENCIO: Color = Color::Rgb(56, 40, 46);
+
 /* --- colores de criaturas: viven acá y no repetidos en cada catálogo --- */
 pub const MURCIELAGO: Color = Color::Rgb(110, 110, 110);
 pub const VERDE_VENENO: Color = Color::Rgb(78, 154, 78);
