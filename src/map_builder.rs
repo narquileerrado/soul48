@@ -122,7 +122,7 @@ impl MapBuilder {
                         entities.push(Entity {
                             pos: item_pos,
                             glyph: '!',
-                            color: Color::Magenta,
+            color: crate::theme::HUESO,
                             name: "Poción de Curación".to_string(),
                             e_type: EntityType::Item,
                         });
@@ -138,7 +138,7 @@ impl MapBuilder {
             entities.push(Entity {
                 pos: chest_pos,
                 glyph: 'C',
-                color: Color::Yellow,
+                color: Color::Rgb(196, 160, 0),
                 name: "Cofre de Madera".into(),
                 e_type: EntityType::Chest { locked: true },
             });
@@ -146,7 +146,7 @@ impl MapBuilder {
             entities.push(Entity {
                 pos: key_pos,
                 glyph: 'k',
-                color: Color::Rgb(200, 200, 0),
+                color: crate::theme::HUESO,
                 name: "Llave de Hierro".into(),
                 e_type: EntityType::Key,
             });
@@ -167,7 +167,7 @@ impl MapBuilder {
             entities.push(Entity {
                 pos: wall_pos,
                 glyph: 'W',
-                color: Color::Rgb(180, 140, 200),
+                color: crate::theme::VIOLETA,
                 name: "Pared de los Lamentos".into(),
                 e_type: EntityType::TalkingWall {
                     message: msg,
@@ -182,7 +182,7 @@ impl MapBuilder {
             entities.push(Entity {
                 pos: altar_pos,
                 glyph: 'A',
-                color: Color::Rgb(255, 100, 100),
+                color: crate::theme::ROJO_ALTAR,
                 name: "Altar de Ecos".into(),
                 e_type: EntityType::EchoAltar { used: false },
             });
@@ -207,7 +207,7 @@ impl MapBuilder {
             EnemyTemplate {
                 name: "Murciélago",
                 glyph: 'b',
-                color: Color::DarkGray,
+                color: Color::Rgb(110, 110, 110),
                 hp: 6,
                 defense: 0,
                 damage: (1, 2),
@@ -217,7 +217,7 @@ impl MapBuilder {
             EnemyTemplate {
                 name: "Serpiente",
                 glyph: 's',
-                color: Color::Green,
+                color: Color::Rgb(78, 154, 78),
                 hp: 12,
                 defense: 1,
                 damage: (2, 4),
@@ -227,7 +227,7 @@ impl MapBuilder {
             EnemyTemplate {
                 name: "Ladrón",
                 glyph: 'L',
-                color: Color::Blue,
+                color: Color::Rgb(92, 127, 209),
                 hp: 18,
                 defense: 2,
                 damage: (2, 5),
@@ -237,7 +237,7 @@ impl MapBuilder {
             EnemyTemplate {
                 name: "Gnoll",
                 glyph: 'g',
-                color: Color::Rgb(150, 75, 0),
+                color: Color::Rgb(184, 106, 40),
                 hp: 28,
                 defense: 3,
                 damage: (4, 7),
@@ -247,7 +247,7 @@ impl MapBuilder {
             EnemyTemplate {
                 name: "Cofre Sospechoso",
                 glyph: 'C',
-                color: Color::Yellow,
+                color: Color::Rgb(196, 160, 0),
                 hp: 45,
                 defense: 5,
                 damage: (6, 12),
