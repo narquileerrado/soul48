@@ -1,4 +1,4 @@
-use crate::app::{EnemyAI, EnemyState, Entity, EntityType, Point};
+use crate::app::{EnemyAI, EnemyState, Entity, EntityType, HazardType, Point, ScrollType, SpecialRoomType};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::style::Color;
@@ -125,11 +125,118 @@ impl MapBuilder {
                             color: Color::Magenta,
                             name: "Poción de Curación".to_string(),
                             e_type: EntityType::Item,
+                            status_effects: Vec::new(),
+                        });
+                    }
+
+                    // Probabilidad de aparición de equipamiento (Armaduras, Cascos, Anillos, Amuletos)
+                    if rng.gen_range(0..100) < 15 {
+                        let mut eq_pos = new_center;
+                        if eq_pos.x > 1 && map[eq_pos.y][eq_pos.x - 1] == '.' {
+                            eq_pos.x -= 1;
+                        }
+                        let eq_entity = match rng.gen_range(0..4) {
+                            0 => Entity {
+                                pos: eq_pos,
+                                glyph: '[',
+                                color: Color::Gray,
+                                name: "Cota de Malla".into(),
+                                e_type: EntityType::Armor { defense: 3 + depth as i32 },
+                                status_effects: Vec::new(),
+                            },
+                            1 => Entity {
+                                pos: eq_pos,
+                                glyph: '^',
+                                color: Color::Yellow,
+                                name: "Yelmo de Hierro".into(),
+                                e_type: EntityType::Helmet { defense: 2 + depth as i32 },
+                                status_effects: Vec::new(),
+                            },
+                            2 => Entity {
+                                pos: eq_pos,
+                                glyph: '=',
+                                color: Color::Yellow,
+                                name: "Anillo de Fuerza".into(),
+                                e_type: EntityType::Ring { stat_bonus: 2 },
+                                status_effects: Vec::new(),
+                            },
+                            _ => Entity {
+                                pos: eq_pos,
+                                glyph: '"',
+                                color: Color::LightCyan,
+                                name: "Amuleto de Claridad".into(),
+                                e_type: EntityType::Amulet { sanity_bonus: 20 },
+                                status_effects: Vec::new(),
+                            },
+                        };
+                        entities.push(eq_entity);
+                    }
+
+                    // Probabilidad de aparición de pergaminos mágicos
+                    if rng.gen_range(0..100) < 15 {
+                        let mut scroll_pos = new_center;
+                        if scroll_pos.y + 1 < map_height && map[scroll_pos.y + 1][scroll_pos.x] == '.' {
+                            scroll_pos.y += 1;
+                        }
+                        let (s_type, s_name) = match rng.gen_range(0..4) {
+                            0 => (ScrollType::Lightning, "Pergamino de Rayo"),
+                            1 => (ScrollType::Fireball, "Pergamino de Bola de Fuego"),
+                            2 => (ScrollType::Teleport, "Pergamino de Teletransporte"),
+                            _ => (ScrollType::Invisibility, "Pergamino de Invisibilidad"),
+                        };
+                        entities.push(Entity {
+                            pos: scroll_pos,
+                            glyph: '?',
+                            color: Color::LightCyan,
+                            name: s_name.to_string(),
+                            e_type: EntityType::Scroll { scroll_type: s_type },
+                            status_effects: Vec::new(),
                         });
                     }
                 }
                 rooms.push(new_room);
             }
+        }
+
+        // Colocación especial de Boss en el Piso 48 (Archidemonio) o en Pisos Múltiplos de 5
+        if depth == 48 && !rooms.is_empty() {
+            let boss_pos = rooms.last().unwrap().center();
+            entities.push(Entity {
+                pos: boss_pos,
+                glyph: 'D',
+                color: Color::LightRed,
+                name: "ARCHIDEMONIO DEL SILENCIO".into(),
+                e_type: EntityType::Mob {
+                    hp: 150,
+                    max_hp: 150,
+                    state: EnemyState::Aggressive,
+                    ai: EnemyAI::Melee,
+                    min_dmg: 8,
+                    max_dmg: 16,
+                    defense: 6,
+                    pacified: false,
+                },
+                status_effects: Vec::new(),
+            });
+        } else if depth % 5 == 0 && rooms.len() > 1 {
+            let boss_pos = rooms.last().unwrap().center();
+            entities.push(Entity {
+                pos: boss_pos,
+                glyph: 'B',
+                color: Color::Rgb(255, 60, 60),
+                name: format!("Guardián del Piso {}", depth),
+                e_type: EntityType::Mob {
+                    hp: 50 + (depth as i32 * 3),
+                    max_hp: 50 + (depth as i32 * 3),
+                    state: EnemyState::Aggressive,
+                    ai: EnemyAI::Melee,
+                    min_dmg: 5 + (depth as i32 / 2),
+                    max_dmg: 10 + (depth as i32 / 2),
+                    defense: 4 + (depth as i32 / 5),
+                    pacified: false,
+                },
+                status_effects: Vec::new(),
+            });
         }
 
         // Colocación estratégica de cofres y llaves
@@ -141,6 +248,7 @@ impl MapBuilder {
                 color: Color::Yellow,
                 name: "Cofre de Madera".into(),
                 e_type: EntityType::Chest { locked: true },
+                status_effects: Vec::new(),
             });
             let key_pos = rooms[2].center();
             entities.push(Entity {
@@ -149,6 +257,70 @@ impl MapBuilder {
                 color: Color::Rgb(200, 200, 0),
                 name: "Llave de Hierro".into(),
                 e_type: EntityType::Key,
+                status_effects: Vec::new(),
+            });
+        }
+
+        // Generación de Puertas en entradas de habitaciones
+        for room in rooms.iter().skip(1) {
+            let door_pos = Point::new(room.x1, room.center().y);
+            if map[door_pos.y][door_pos.x] == '.' {
+                let is_locked = rng.gen_bool(0.2);
+                let is_secret = rng.gen_bool(0.1);
+                entities.push(Entity {
+                    pos: door_pos,
+                    glyph: if is_secret { '║' } else if is_locked { '+' } else { '+' },
+                    color: if is_locked { Color::Red } else { Color::Rgb(160, 100, 40) },
+                    name: if is_secret { "Muro Sospechoso".into() } else if is_locked { "Puerta Cerrada con Llave".into() } else { "Puerta de Madera".into() },
+                    e_type: EntityType::Door {
+                        locked: is_locked,
+                        secret: is_secret,
+                        open: false,
+                    },
+                    status_effects: Vec::new(),
+                });
+            }
+        }
+
+        // Generación de Peligros Ambientales (Pinchos, Ácido, Fuego, Aceite)
+        for room in rooms.iter().skip(1) {
+            if rng.gen_bool(0.3) {
+                let h_pos = Point::new(room.x1 + 1, room.y1 + 1);
+                if map[h_pos.y][h_pos.x] == '.' {
+                    let (h_type, glyph, color, name) = match rng.gen_range(0..4) {
+                        0 => (HazardType::Spikes, '^', Color::DarkGray, "Trampa de Pinchos"),
+                        1 => (HazardType::Acid, '~', Color::Green, "Pozo de Ácido"),
+                        2 => (HazardType::Oil, 'o', Color::Rgb(100, 100, 50), "Charco de Aceite"),
+                        _ => (HazardType::Fire, '&', Color::Red, "Fuego"),
+                    };
+                    entities.push(Entity {
+                        pos: h_pos,
+                        glyph,
+                        color,
+                        name: name.into(),
+                        e_type: EntityType::Hazard { hazard_type: h_type },
+                        status_effects: Vec::new(),
+                    });
+                }
+            }
+        }
+
+        // Generación de Salas Especiales (Armería, Biblioteca, Círculo Ritual)
+        if rooms.len() > 5 {
+            let s_room = &rooms[5];
+            let marker_pos = s_room.center();
+            let room_type = match rng.gen_range(0..3) {
+                0 => SpecialRoomType::Armory,
+                1 => SpecialRoomType::Library,
+                _ => SpecialRoomType::RitualCircle,
+            };
+            entities.push(Entity {
+                pos: marker_pos,
+                glyph: 'R',
+                color: Color::Rgb(255, 215, 0),
+                name: "Marca de Sala Especial".into(),
+                e_type: EntityType::SpecialRoomMarker { room_type },
+                status_effects: Vec::new(),
             });
         }
 
@@ -173,6 +345,7 @@ impl MapBuilder {
                     message: msg,
                     whispered: false,
                 },
+                status_effects: Vec::new(),
             });
         }
 
@@ -185,6 +358,7 @@ impl MapBuilder {
                 color: Color::Rgb(255, 100, 100),
                 name: "Altar de Ecos".into(),
                 e_type: EntityType::EchoAltar { used: false },
+                status_effects: Vec::new(),
             });
         }
 
@@ -287,7 +461,9 @@ impl MapBuilder {
                 min_dmg: selected.damage.0 + (difficulty_bonus / 4),
                 max_dmg: selected.damage.1 + (difficulty_bonus / 4),
                 defense: selected.defense + (difficulty_bonus / 6),
+                pacified: false,
             },
+            status_effects: Vec::new(),
         }
     }
 }

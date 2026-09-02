@@ -24,7 +24,11 @@ pub fn ui(f: &mut Frame, app: &App) {
         .constraints([Constraint::Length(7), Constraint::Min(0)])
         .split(top_chunks[1]);
 
-    let ui_style = Style::default().fg(Color::Cyan);
+    let ui_style = if app.damage_flash_turns > 0 {
+        Style::default().fg(Color::Red)
+    } else {
+        Style::default().fg(Color::Cyan)
+    };
 
     // Renderizado procedimental del mapa basado en el Campo de Visión (FOV)
     let map_lines: Vec<Line> = app
@@ -93,9 +97,17 @@ pub fn ui(f: &mut Frame, app: &App) {
     } else {
         "Puños (1-3)".to_string()
     };
+    let armor_text = app.equipped_armor.as_ref().map(|a| a.0.clone()).unwrap_or_else(|| "Ninguna".into());
+    let helmet_text = app.equipped_helmet.as_ref().map(|h| h.0.clone()).unwrap_or_else(|| "Ninguno".into());
+    let ring_text = app.equipped_ring.as_ref().map(|r| r.0.clone()).unwrap_or_else(|| "Ninguno".into());
+    let amulet_text = app.equipped_amulet.as_ref().map(|am| am.0.clone()).unwrap_or_else(|| "Ninguno".into());
+
     let stats = format!(
-        "PISO: {}\nHP: {}/{}\nARMA: {}\nSEED: {}",
-        app.depth, app.hero_hp, app.hero_max_hp, weapon_text, app.seed
+        "NIVEL: {}  XP: {}/{}\nHP: {}/{}  COR: {}/{}\nFUE: {}  AGI: {}  VOL: {}\nARMA: {}\nARM: {}  CAS: {}\nANI: {}  AMU: {}\nSEED: {}",
+        app.level, app.xp, app.next_level_xp,
+        app.hero_hp, app.hero_max_hp, app.sanity, app.max_sanity,
+        app.strength, app.agility, app.willpower,
+        weapon_text, armor_text, helmet_text, ring_text, amulet_text, app.seed
     );
     f.render_widget(
         Paragraph::new(stats).block(
