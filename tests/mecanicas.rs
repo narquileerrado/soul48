@@ -1,0 +1,490 @@
+//! Escenarios de varios turnos sobre una sala controlada.
+//!
+//! Cada test arma su propio escenario con `App::arena`, así ninguno depende
+//! de lo que `MapBuilder` haya generado para una semilla determinada.
+
+use soul48::app::{
+    App, EnemyAI, EnemyState, Entity, EntityType, LogType, Point, ScrollType, StatusEffect,
+    StatusEffectType,
+};
+use soul48::map_builder::MapBuilder;
+use soul48::theme;
+
+/// Un mob de prueba con estadísticas explícitas.
+fn mob(pos: Point, nombre: &str, hp: i32, dmg: (i32, i32), defense: i32, ai: EnemyAI) -> Entity {
+    Entity {
+        pos,
+        glyph: 'g',
+        color: theme::ROJO_ALTAR,
+        name: nombre.to_string(),
+        e_type: EntityType::Mob {
+            hp,
+            max_hp: hp,
+            state: EnemyState::Aggressive,
+            ai,
+            min_dmg: dmg.0,
+            max_dmg: dmg.1,
+            defense,
+            pacified: false,
+        },
+        status_effects: Vec::new(),
+    }
+}
+
+fn objeto(pos: Point, nombre: &str, e_type: EntityType) -> Entity {
+    Entity {
+        pos,
+        glyph: '?',
+        color: theme::HUESO,
+        name: nombre.to_string(),
+        e_type,
+        status_effects: Vec::new(),
+    }
+}
+
+fn hp_de(app: &App, nombre: &str) -> Option<i32> {
+    app.entities
+        .iter()
+        .find(|e| e.name == nombre)
+        .and_then(|e| {
+            if let EntityType::Mob { hp, .. } = e.e_type {
+                Some(hp)
+            } else {
+                None
+            }
+        })
+}
+
+/// Un mob que baja a 0 por daño de pergamino tiene que morir, desaparecer del
+/// mapa y dar experiencia, igual que si lo hubieras matado cuerpo a cuerpo.
+#[test]
+fn pergamino_de_rayo_mata_y_da_xp() {
+    let mut app = App::arena(7);
+    let objetivo = Point::new(app.player.pos.x + 2, app.player.pos.y);
+    app.entities
+        .push(mob(objetivo, "Gnoll", 10, (4, 6), 1, EnemyAI::Melee));
+
+    app.inventory.push((
+        objeto(
+            Point::new(0, 0),
+            "Pergamino de Rayo",
+            EntityType::Scroll {
+                scroll_type: ScrollType::Lightning,
+            },
+        ),
+        1,
+    ));
+
+    let xp_antes = app.player.xp;
+    assert!(app.use_item(0));
+
+    assert!(
+        hp_de(&app, "Gnoll").is_none(),
+        "el Gnoll sobrevivió al rayo con {:?} de vida",
+        hp_de(&app, "Gnoll")
+    );
+    assert!(
+        app.player.xp > xp_antes,
+        "matar con un pergamino no dio experiencia"
+    );
+}
+
+/// Lo mismo para la embestida contra la pared: es daño, y el daño mata.
+#[test]
+fn embestida_contra_la_pared_puede_matar() {
+    let mut app = App::arena(7);
+    // pegado al muro este de la arena, sin casilla libre detrás
+    app.player.pos = Point::new(app.map[0].len() - 3, 5);
+    let objetivo = Point::new(app.map[0].len() - 2, 5);
+    app.entities
+        .push(mob(objetivo, "Murciélago", 3, (1, 2), 0, EnemyAI::Melee));
+
+    assert!(app.use_pushback());
+    assert!(
+        hp_de(&app, "Murciélago").is_none(),
+        "el Murciélago quedó vivo con {:?} de vida tras la embestida",
+        hp_de(&app, "Murciélago")
+    );
+}
+
+/// La armadura y el casco tienen que restar daño recibido.
+#[test]
+fn la_armadura_reduce_el_dano_recibido() {
+    let escenario = |con_armadura: bool| -> i32 {
+        let mut app = App::arena(11);
+        app.player.stats.agility = 0; // sin esquiva, para aislar el efecto de la defensa
+        if con_armadura {
+            app.player.equipment.armor = Some(("Cota de Malla".to_string(), 4));
+        }
+        let al_lado = Point::new(app.player.pos.x + 1, app.player.pos.y);
+        app.entities
+            .push(mob(al_lado, "Gnoll", 100, (10, 10), 0, EnemyAI::Stationary));
+
+        let hp_antes = app.player.hp;
+        app.process_enemy_turns();
+        hp_antes - app.player.hp
+    };
+
+    let sin = escenario(false);
+    let con = escenario(true);
+    assert!(sin > 0, "el enemigo adyacente no llegó a pegar");
+    assert!(
+        con < sin,
+        "con armadura recibiste {} de daño y sin armadura {}: la armadura no hace nada",
+        con,
+        sin
+    );
+}
+
+/// El amuleto sube la cordura máxima mientras está puesto.
+#[test]
+fn el_amuleto_sube_la_cordura_maxima() {
+    let mut app = App::arena(3);
+    let base = app.player.max_sanity_total();
+    app.player.equipment.amulet = Some(("Amuleto de Claridad".to_string(), 20));
+    assert_eq!(app.player.max_sanity_total(), base + 20);
+}
+
+/// Bajar de piso no puede borrar el nivel, los atributos ni el equipo.
+#[test]
+fn el_descenso_conserva_la_progresion() {
+    let mut app = App::arena(5);
+    app.add_xp(200); // fuerza varias subidas de nivel
+    app.player.equipment.armor = Some(("Cota de Malla".to_string(), 4));
+    app.player.equipment.amulet = Some(("Amuleto de Claridad".to_string(), 20));
+
+    let (nivel, max_hp, fuerza) = (
+        app.player.level,
+        app.player.max_hp,
+        app.player.stats.strength,
+    );
+    assert!(nivel > 1, "el escenario no llegó a subir de nivel");
+
+    app.descend();
+    let abajo = &app;
+
+    assert_eq!(abajo.depth, 2);
+    assert_eq!(abajo.player.level, nivel, "se perdió el nivel al descender");
+    assert_eq!(abajo.player.max_hp, max_hp, "se perdió la vida máxima");
+    assert_eq!(
+        abajo.player.stats.strength, fuerza,
+        "se perdieron los atributos"
+    );
+    assert_eq!(
+        abajo.player.equipment.armor,
+        Some(("Cota de Malla".to_string(), 4)),
+        "se perdió la armadura equipada"
+    );
+    assert!(
+        abajo.player.hp <= abajo.player.max_hp,
+        "quedaste con {}/{} de vida",
+        abajo.player.hp,
+        abajo.player.max_hp
+    );
+    assert_eq!(
+        abajo.map[abajo.player.pos.y][abajo.player.pos.x], '.',
+        "apareciste dentro de un muro del piso nuevo"
+    );
+}
+
+/// Un enemigo dormido a distancia despierta, se acerca y termina pegando.
+#[test]
+fn el_enemigo_despierta_se_acerca_y_ataca() {
+    let mut app = App::arena(13);
+    app.player.stats.agility = 0;
+    let lejos = Point::new(app.player.pos.x + 3, app.player.pos.y);
+    let mut dormido = mob(lejos, "Serpiente", 40, (3, 3), 0, EnemyAI::Melee);
+    if let EntityType::Mob { ref mut state, .. } = dormido.e_type {
+        *state = EnemyState::Asleep;
+    }
+    app.entities.push(dormido);
+
+    let hp_inicial = app.player.hp;
+    let mut distancias = Vec::new();
+    for _ in 0..4 {
+        app.process_enemy_turns();
+        let p = app.entities[0].pos;
+        distancias.push(
+            (p.x as isize - app.player.pos.x as isize).abs()
+                + (p.y as isize - app.player.pos.y as isize).abs(),
+        );
+    }
+
+    assert!(
+        distancias.last() < distancias.first(),
+        "la serpiente nunca se acercó: {:?}",
+        distancias
+    );
+    assert!(
+        app.player.hp < hp_inicial,
+        "la serpiente llegó al cuerpo a cuerpo y nunca pegó"
+    );
+}
+
+/// Misma semilla y misma secuencia de acciones: mismo resultado.
+#[test]
+fn la_semilla_es_determinista() {
+    let partida = || -> (i32, u32, usize, Point) {
+        let mut app = App::new(Some(4242), None, None, 1, None);
+        app.start_new_game();
+        for _ in 0..30 {
+            app.try_move(1, 0);
+            app.try_move(0, 1);
+            app.process_enemy_turns();
+        }
+        (
+            app.player.hp,
+            app.player.xp,
+            app.entities.len(),
+            app.player.pos,
+        )
+    };
+    assert_eq!(partida(), partida(), "la partida no es reproducible");
+}
+
+/// Ninguna entidad puede quedar tapada por otra ni encima de la escalera:
+/// `try_move` sólo ve la primera de la pila.
+#[test]
+fn la_generacion_no_apila_entidades() {
+    for seed in 0..25u64 {
+        for depth in [1u32, 5, 48] {
+            let construido = MapBuilder::new(seed, depth);
+            let mut vistas = std::collections::HashSet::new();
+            for e in &construido.entities {
+                assert!(
+                    vistas.insert((e.pos.x, e.pos.y)),
+                    "semilla {} piso {}: dos entidades en {:?} (la segunda es {})",
+                    seed,
+                    depth,
+                    e.pos,
+                    e.name
+                );
+                assert_ne!(
+                    construido.map[e.pos.y][e.pos.x], '>',
+                    "semilla {} piso {}: {} tapa la escalera",
+                    seed, depth, e.name
+                );
+                assert_eq!(
+                    construido.map[e.pos.y][e.pos.x], '.',
+                    "semilla {} piso {}: {} quedó dentro de un muro",
+                    seed, depth, e.name
+                );
+            }
+        }
+    }
+}
+
+/// El historial guarda más de lo que la pantalla muestra: el ajuste de
+/// líneas visibles no puede borrar datos.
+#[test]
+fn el_ajuste_de_pantalla_no_borra_el_historial() {
+    let mut app = App::arena(2);
+    app.settings.lineas_susurro = 3;
+    for i in 0..20 {
+        app.add_log(format!("mensaje {}", i), LogType::Info);
+    }
+    assert!(
+        app.logs.len() > 3,
+        "el historial quedó recortado a {} mensajes por un ajuste de pantalla",
+        app.logs.len()
+    );
+}
+
+/// Desequipar no puede crear slots por encima del tope alcanzable con 1-9.
+#[test]
+fn desequipar_respeta_el_tope_del_inventario() {
+    let mut app = App::arena(17);
+    for i in 0..9 {
+        app.inventory.push((
+            objeto(
+                Point::new(0, 0),
+                &format!("Baratija {}", i),
+                EntityType::Item,
+            ),
+            1,
+        ));
+    }
+    app.player.equipment.armor = Some(("Cota vieja".to_string(), 2));
+    // la nueva armadura entra desde el suelo, no desde el inventario lleno
+    app.inventory[8] = (
+        objeto(
+            Point::new(0, 0),
+            "Cota nueva",
+            EntityType::Armor { defense: 5 },
+        ),
+        1,
+    );
+
+    app.use_item(8);
+    assert!(
+        app.inventory.len() <= 9,
+        "el inventario quedó con {} objetos: los que pasan de 9 son inalcanzables",
+        app.inventory.len()
+    );
+}
+
+/// Los efectos de estado se consumen y se van.
+#[test]
+fn los_efectos_de_estado_expiran() {
+    let mut app = App::arena(19);
+    app.player.status_effects.push(StatusEffect {
+        effect_type: StatusEffectType::Poison,
+        duration: 2,
+        damage_per_turn: 2,
+    });
+    let hp = app.player.hp;
+    app.process_enemy_turns();
+    app.process_enemy_turns();
+    assert!(app.player.status_effects.is_empty(), "el veneno no expiró");
+    assert_eq!(hp - app.player.hp, 4, "el veneno no hizo su daño por turno");
+}
+
+/// Una puerta cerrada corta la visión; abierta, deja pasar la mirada.
+#[test]
+fn la_puerta_cerrada_bloquea_la_vision() {
+    let mut app = App::arena(23);
+    let puerta = Point::new(app.player.pos.x + 1, app.player.pos.y);
+    let detras = Point::new(app.player.pos.x + 2, app.player.pos.y);
+
+    app.entities.push(objeto(
+        puerta,
+        "Puerta de Madera",
+        EntityType::Door {
+            locked: false,
+            secret: false,
+            open: false,
+        },
+    ));
+    app.calculate_fov();
+    assert!(
+        !app.visible[detras.y][detras.x],
+        "se ve a través de una puerta cerrada"
+    );
+
+    if let EntityType::Door { ref mut open, .. } = app.entities[0].e_type {
+        *open = true;
+    }
+    app.calculate_fov();
+    assert!(
+        app.visible[detras.y][detras.x],
+        "la puerta abierta sigue tapando la vista"
+    );
+}
+
+/// El compendio y lo que aparece en el mapa tienen que decir lo mismo.
+#[test]
+fn el_compendio_no_le_miente_al_jugador() {
+    use soul48::bestiary::BESTIARIO;
+
+    // en el piso 1 no hay bonus de dificultad: los números salen tal cual
+    let mut vistas = std::collections::HashMap::new();
+    for seed in 0..60u64 {
+        for e in MapBuilder::new(seed, 1).entities {
+            if let EntityType::Mob {
+                max_hp,
+                min_dmg,
+                max_dmg,
+                defense,
+                ..
+            } = e.e_type
+            {
+                vistas.insert(e.name.clone(), (max_hp, min_dmg, max_dmg, defense, e.glyph));
+            }
+        }
+    }
+    assert!(!vistas.is_empty(), "no apareció ninguna criatura");
+
+    for (nombre, (hp, min_d, max_d, def, glifo)) in vistas {
+        let Some(ficha) = BESTIARIO.iter().find(|b| b.short_name == nombre) else {
+            continue; // los jefes no están en el compendio
+        };
+        assert_eq!(
+            ficha.base_hp, hp,
+            "{}: vida distinta a la del compendio",
+            nombre
+        );
+        assert_eq!(
+            ficha.base_damage,
+            (min_d, max_d),
+            "{}: daño distinto al del compendio",
+            nombre
+        );
+        assert_eq!(
+            ficha.base_defense, def,
+            "{}: defensa distinta a la del compendio",
+            nombre
+        );
+        assert_eq!(ficha.glyph, glifo, "{}: glifo distinto", nombre);
+    }
+}
+
+/// Una partida larga: cientos de turnos, varios pisos, sin romper invariantes.
+///
+/// No comprueba una mecánica puntual sino que nada se desmadre: vida y cordura
+/// dentro de sus topes, el héroe siempre sobre suelo transitable, el inventario
+/// dentro de las nueve ranuras y ningún mob vivo con vida negativa.
+#[test]
+fn una_partida_larga_mantiene_los_invariantes() {
+    for seed in [1u64, 77, 2024] {
+        let mut app = App::new(Some(seed), None, None, 1, None);
+        app.start_new_game();
+
+        let pasos = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+        for turno in 0..600 {
+            let (dx, dy) = pasos[turno % pasos.len()];
+            app.try_move(dx, dy);
+
+            if turno % 17 == 0 && !app.inventory.is_empty() {
+                app.use_item(turno % app.inventory.len());
+            }
+            if turno % 23 == 0 {
+                app.use_pushback();
+            }
+            if app.show_descend_prompt {
+                app.confirm_descent();
+                app.descend();
+            }
+            app.process_enemy_turns();
+            app.calculate_fov();
+
+            assert!(
+                app.player.hp <= app.player.max_hp,
+                "semilla {}: vida {}/{}",
+                seed,
+                app.player.hp,
+                app.player.max_hp
+            );
+            assert!(
+                app.player.sanity <= app.player.max_sanity_total(),
+                "semilla {}: cordura por encima de su techo",
+                seed
+            );
+            assert!(
+                app.inventory.len() <= 9,
+                "semilla {}: {} objetos en el inventario",
+                seed,
+                app.inventory.len()
+            );
+            assert!(
+                app.es_transitable(app.player.pos),
+                "semilla {}: el héroe terminó dentro de un muro",
+                seed
+            );
+            for e in &app.entities {
+                if let EntityType::Mob { hp, .. } = e.e_type {
+                    assert!(
+                        hp > 0,
+                        "semilla {}: {} sigue vivo con {} de vida",
+                        seed,
+                        e.name,
+                        hp
+                    );
+                }
+            }
+
+            if app.player.hp <= 0 {
+                break;
+            }
+        }
+    }
+}

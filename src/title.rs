@@ -251,11 +251,7 @@ pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajus
             .constraints([Constraint::Length(alto_arte), Constraint::Min(0)])
             .split(interior_cronica);
         let paleta = Paleta::de(theme::MURO, theme::ORO);
-        let lineas = arte::PORTAL.lineas(
-            &paleta,
-            Color::Reset,
-            ajustes.glifos == Glifos::Ascii,
-        );
+        let lineas = arte::PORTAL.lineas(&paleta, Color::Reset, ajustes.glifos == Glifos::Ascii);
         f.render_widget(
             Paragraph::new(lineas).alignment(Alignment::Center),
             partes[0],
@@ -294,8 +290,5 @@ pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajus
             Span::styled(" salir", Style::default().fg(theme::CENIZA_HONDA)),
         ]),
     ];
-    f.render_widget(
-        Paragraph::new(pie).alignment(Alignment::Center),
-        filas[3],
-    );
+    f.render_widget(Paragraph::new(pie).alignment(Alignment::Center), filas[3]);
 }

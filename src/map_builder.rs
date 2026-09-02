@@ -1,7 +1,10 @@
-use crate::app::{EnemyAI, EnemyState, Entity, EntityType, HazardType, Point, ScrollType, SpecialRoomType};
+use crate::app::{
+    EnemyAI, EnemyState, Entity, EntityType, HazardType, Point, ScrollType, SpecialRoomType,
+};
+use crate::bestiary;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use ratatui::style::Color;
+use std::collections::HashSet;
 
 /// Representa una región rectangular en el mapa, utilizada para generar habitaciones.
 struct Rect {
@@ -31,18 +34,6 @@ impl Rect {
     fn intersect(&self, other: &Rect) -> bool {
         self.x1 <= other.x2 && self.x2 >= other.x1 && self.y1 <= other.y2 && self.y2 >= other.y1
     }
-}
-
-/// Define las características base para un tipo de enemigo antes de ser instanciado.
-struct EnemyTemplate {
-    name: &'static str,
-    glyph: char,
-    color: Color,
-    hp: i32,
-    defense: i32,
-    damage: (i32, i32),
-    ai: EnemyAI,
-    spawn_weight: i32,
 }
 
 /// Encargado de la generación procedimental del nivel, incluyendo geografía y entidades.
@@ -141,7 +132,9 @@ impl MapBuilder {
                                 glyph: '[',
                                 color: crate::theme::HUESO,
                                 name: "Cota de Malla".into(),
-                                e_type: EntityType::Armor { defense: 3 + depth as i32 },
+                                e_type: EntityType::Armor {
+                                    defense: 3 + depth as i32,
+                                },
                                 status_effects: Vec::new(),
                             },
                             1 => Entity {
@@ -149,7 +142,9 @@ impl MapBuilder {
                                 glyph: '^',
                                 color: crate::theme::HUESO,
                                 name: "Yelmo de Hierro".into(),
-                                e_type: EntityType::Helmet { defense: 2 + depth as i32 },
+                                e_type: EntityType::Helmet {
+                                    defense: 2 + depth as i32,
+                                },
                                 status_effects: Vec::new(),
                             },
                             2 => Entity {
@@ -175,7 +170,9 @@ impl MapBuilder {
                     // Probabilidad de aparición de pergaminos mágicos
                     if rng.gen_range(0..100) < 15 {
                         let mut scroll_pos = new_center;
-                        if scroll_pos.y + 1 < map_height && map[scroll_pos.y + 1][scroll_pos.x] == '.' {
+                        if scroll_pos.y + 1 < map_height
+                            && map[scroll_pos.y + 1][scroll_pos.x] == '.'
+                        {
                             scroll_pos.y += 1;
                         }
                         let (s_type, s_name) = match rng.gen_range(0..4) {
@@ -189,7 +186,9 @@ impl MapBuilder {
                             glyph: '?',
                             color: crate::theme::VIOLETA,
                             name: s_name.to_string(),
-                            e_type: EntityType::Scroll { scroll_type: s_type },
+                            e_type: EntityType::Scroll {
+                                scroll_type: s_type,
+                            },
                             status_effects: Vec::new(),
                         });
                     }
@@ -218,7 +217,7 @@ impl MapBuilder {
                 },
                 status_effects: Vec::new(),
             });
-        } else if depth % 5 == 0 && rooms.len() > 1 {
+        } else if depth.is_multiple_of(5) && rooms.len() > 1 {
             let boss_pos = rooms.last().unwrap().center();
             entities.push(Entity {
                 pos: boss_pos,
@@ -267,17 +266,21 @@ impl MapBuilder {
             if map[door_pos.y][door_pos.x] == '.' {
                 let is_locked = rng.gen_bool(0.2);
                 let is_secret = rng.gen_bool(0.1);
+                // El pasaje secreto se disfraza de muro. La puerta con llave
+                // comparte el glifo '+' con la de madera y se distingue por el
+                // oro: es la misma puerta, cerrada.
+                let (glyph, color, name) = if is_secret {
+                    ('║', crate::theme::MURO, "Muro Sospechoso")
+                } else if is_locked {
+                    ('+', crate::theme::ORO, "Puerta Cerrada con Llave")
+                } else {
+                    ('+', crate::theme::CENIZA, "Puerta de Madera")
+                };
                 entities.push(Entity {
                     pos: door_pos,
-                    glyph: if is_secret { '║' } else if is_locked { '+' } else { '+' },
-                    color: if is_secret {
-                        crate::theme::MURO
-                    } else if is_locked {
-                        crate::theme::ORO
-                    } else {
-                        crate::theme::CENIZA
-                    },
-                    name: if is_secret { "Muro Sospechoso".into() } else if is_locked { "Puerta Cerrada con Llave".into() } else { "Puerta de Madera".into() },
+                    glyph,
+                    color,
+                    name: name.into(),
                     e_type: EntityType::Door {
                         locked: is_locked,
                         secret: is_secret,
@@ -294,9 +297,19 @@ impl MapBuilder {
                 let h_pos = Point::new(room.x1 + 1, room.y1 + 1);
                 if map[h_pos.y][h_pos.x] == '.' {
                     let (h_type, glyph, color, name) = match rng.gen_range(0..4) {
-                        0 => (HazardType::Spikes, '^', crate::theme::AMBAR, "Trampa de Pinchos"),
+                        0 => (
+                            HazardType::Spikes,
+                            '^',
+                            crate::theme::AMBAR,
+                            "Trampa de Pinchos",
+                        ),
                         1 => (HazardType::Acid, '~', crate::theme::AMBAR, "Pozo de Ácido"),
-                        2 => (HazardType::Oil, 'o', crate::theme::AMBAR, "Charco de Aceite"),
+                        2 => (
+                            HazardType::Oil,
+                            'o',
+                            crate::theme::AMBAR,
+                            "Charco de Aceite",
+                        ),
                         _ => (HazardType::Fire, '&', crate::theme::AMBAR, "Fuego"),
                     };
                     entities.push(Entity {
@@ -304,7 +317,9 @@ impl MapBuilder {
                         glyph,
                         color,
                         name: name.into(),
-                        e_type: EntityType::Hazard { hazard_type: h_type },
+                        e_type: EntityType::Hazard {
+                            hazard_type: h_type,
+                        },
                         status_effects: Vec::new(),
                     });
                 }
@@ -312,6 +327,10 @@ impl MapBuilder {
         }
 
         // Generación de Salas Especiales (Armería, Biblioteca, Círculo Ritual)
+        //
+        // La marca sola no alcanzaba: la sala anunciaba pergaminos arcanos o
+        // metal templado en el historial y por dentro estaba tan vacía como
+        // cualquier otra. Ahora el anuncio describe lo que hay.
         if rooms.len() > 5 {
             let s_room = &rooms[5];
             let marker_pos = s_room.center();
@@ -320,6 +339,8 @@ impl MapBuilder {
                 1 => SpecialRoomType::Library,
                 _ => SpecialRoomType::RitualCircle,
             };
+
+            let botin = Self::botin_de_sala(&mut rng, &room_type, depth);
             entities.push(Entity {
                 pos: marker_pos,
                 glyph: 'R',
@@ -328,6 +349,15 @@ impl MapBuilder {
                 e_type: EntityType::SpecialRoomMarker { room_type },
                 status_effects: Vec::new(),
             });
+            // el contenido se reparte por la sala; `casilla_libre` termina de
+            // acomodar lo que caiga encima de algo
+            for (i, mut e) in botin.into_iter().enumerate() {
+                e.pos = Point::new(
+                    (s_room.x1 + 1 + i).min(s_room.x2.saturating_sub(1)),
+                    s_room.y1 + 1,
+                );
+                entities.push(e);
+            }
         }
 
         // Colocación de Pared Parlante
@@ -368,105 +398,177 @@ impl MapBuilder {
             });
         }
 
-        // Colocación del punto de salida (escaleras)
+        // Colocación del punto de salida (escaleras). Va antes de resolver
+        // colisiones para que la casilla quede reservada.
         if let Some(last_room) = rooms.last() {
             let stairs_pos = last_room.center();
             map[stairs_pos.y][stairs_pos.x] = '>';
         }
 
+        // Casi todo se genera apuntando al centro de una sala: el enemigo, el
+        // cofre, el altar, la marca de sala especial y el jefe compiten por la
+        // misma casilla. Como `try_move` resuelve con la *primera* entidad que
+        // encuentra en una posición, todo lo que quedaba debajo era inalcanzable
+        // —y en el piso 48 el jefe tapaba la escalera—. Acá cada entidad se
+        // corre a la casilla transitable libre más cercana.
+        let mut ocupadas: HashSet<(usize, usize)> = HashSet::new();
+        ocupadas.insert((hero_start.x, hero_start.y));
+        let mut acomodadas = Vec::with_capacity(entities.len());
+        for mut e in entities {
+            // sin lugar cerca, la entidad no llega a existir: es preferible a
+            // que tape a otra
+            if let Some(p) = Self::casilla_libre(e.pos, &map, &ocupadas) {
+                e.pos = p;
+                ocupadas.insert((p.x, p.y));
+                acomodadas.push(e);
+            }
+        }
+
         MapBuilder {
             map,
             hero_start,
-            entities,
+            entities: acomodadas,
         }
     }
 
-    /// Selecciona y configura un enemigo aleatorio basado en pesos de aparición y dificultad.
+    /// Casilla transitable libre más cercana a `origen`, buscando en anillos.
+    ///
+    /// Devuelve `None` si en todo el radio no hay lugar.
+    fn casilla_libre(
+        origen: Point,
+        map: &[Vec<char>],
+        ocupadas: &HashSet<(usize, usize)>,
+    ) -> Option<Point> {
+        const RADIO_MAX: isize = 8;
+        let (alto, ancho) = (map.len() as isize, map[0].len() as isize);
+
+        for radio in 0..=RADIO_MAX {
+            for dy in -radio..=radio {
+                for dx in -radio..=radio {
+                    // sólo el borde del anillo: el interior ya se miró
+                    if dx.abs().max(dy.abs()) != radio {
+                        continue;
+                    }
+                    let (x, y) = (origen.x as isize + dx, origen.y as isize + dy);
+                    if x < 0 || y < 0 || x >= ancho || y >= alto {
+                        continue;
+                    }
+                    let (x, y) = (x as usize, y as usize);
+                    if map[y][x] == '.' && !ocupadas.contains(&(x, y)) {
+                        return Some(Point::new(x, y));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Lo que guarda cada sala especial.
+    fn botin_de_sala(rng: &mut ChaCha8Rng, tipo: &SpecialRoomType, depth: u32) -> Vec<Entity> {
+        let bonus = depth as i32;
+        match tipo {
+            // metal templado: armas y protección
+            SpecialRoomType::Armory => vec![
+                Entity {
+                    pos: Point::new(0, 0),
+                    glyph: '/',
+                    color: crate::theme::AZUL_ALMA,
+                    name: format!("Espada de la Armería +{}", bonus),
+                    e_type: EntityType::Weapon {
+                        min_dmg: 4 + bonus,
+                        max_dmg: 9 + bonus,
+                    },
+                    status_effects: Vec::new(),
+                },
+                Entity {
+                    pos: Point::new(0, 0),
+                    glyph: '[',
+                    color: crate::theme::HUESO,
+                    name: "Coraza de la Armería".into(),
+                    e_type: EntityType::Armor { defense: 4 + bonus },
+                    status_effects: Vec::new(),
+                },
+            ],
+            // pergaminos arcanos en los estantes
+            SpecialRoomType::Library => (0..3)
+                .map(|_| {
+                    let (tipo, nombre) = match rng.gen_range(0..4) {
+                        0 => (ScrollType::Lightning, "Pergamino de Rayo"),
+                        1 => (ScrollType::Fireball, "Pergamino de Bola de Fuego"),
+                        2 => (ScrollType::Teleport, "Pergamino de Teletransporte"),
+                        _ => (ScrollType::Invisibility, "Pergamino de Invisibilidad"),
+                    };
+                    Entity {
+                        pos: Point::new(0, 0),
+                        glyph: '?',
+                        color: crate::theme::VIOLETA,
+                        name: nombre.into(),
+                        e_type: EntityType::Scroll { scroll_type: tipo },
+                        status_effects: Vec::new(),
+                    }
+                })
+                .collect(),
+            // energía oscura: lo que da, lo cobra
+            SpecialRoomType::RitualCircle => vec![
+                Entity {
+                    pos: Point::new(0, 0),
+                    glyph: '"',
+                    color: crate::theme::VIOLETA,
+                    name: "Amuleto del Círculo".into(),
+                    e_type: EntityType::Amulet { sanity_bonus: 40 },
+                    status_effects: Vec::new(),
+                },
+                Entity {
+                    pos: Point::new(0, 0),
+                    glyph: '&',
+                    color: crate::theme::AMBAR,
+                    name: "Fuego Ritual".into(),
+                    e_type: EntityType::Hazard {
+                        hazard_type: HazardType::Fire,
+                    },
+                    status_effects: Vec::new(),
+                },
+            ],
+        }
+    }
+
+    /// Elige una criatura del catálogo por peso y la escala a la profundidad.
+    ///
+    /// Las estadísticas salen de `bestiary::BESTIARIO`: son las mismas que
+    /// muestra el compendio, no una copia que puede quedar desfasada.
     fn spawn_random_enemy(rng: &mut ChaCha8Rng, pos: Point, depth: u32) -> Entity {
-        let catalog = vec![
-            EnemyTemplate {
-                name: "Murciélago",
-                glyph: 'b',
-                color: Color::Rgb(110, 110, 110),
-                hp: 6,
-                defense: 0,
-                damage: (1, 2),
-                ai: EnemyAI::Wandering,
-                spawn_weight: 30,
-            },
-            EnemyTemplate {
-                name: "Serpiente",
-                glyph: 's',
-                color: Color::Rgb(78, 154, 78),
-                hp: 12,
-                defense: 1,
-                damage: (2, 4),
-                ai: EnemyAI::Melee,
-                spawn_weight: 25,
-            },
-            EnemyTemplate {
-                name: "Ladrón",
-                glyph: 'L',
-                color: Color::Rgb(92, 127, 209),
-                hp: 18,
-                defense: 2,
-                damage: (2, 5),
-                ai: EnemyAI::Coward,
-                spawn_weight: 20,
-            },
-            EnemyTemplate {
-                name: "Gnoll",
-                glyph: 'g',
-                color: Color::Rgb(184, 106, 40),
-                hp: 28,
-                defense: 3,
-                damage: (4, 7),
-                ai: EnemyAI::Melee,
-                spawn_weight: 15,
-            },
-            EnemyTemplate {
-                name: "Cofre Sospechoso",
-                glyph: 'C',
-                color: crate::theme::COFRE,
-                hp: 45,
-                defense: 5,
-                damage: (6, 12),
-                ai: EnemyAI::Stationary,
-                spawn_weight: 10,
-            },
-        ];
+        let catalogo = &bestiary::BESTIARIO;
+        let peso_total: i32 = catalogo.iter().map(|e| e.spawn_weight).sum();
+        let mut tirada = rng.gen_range(0..peso_total);
 
-        let total_weight: i32 = catalog.iter().map(|e| e.spawn_weight).sum();
-        let mut roll = rng.gen_range(0..total_weight);
-
-        let mut selected = &catalog[0];
-        for template in catalog.iter() {
-            if roll < template.spawn_weight {
-                selected = template;
+        let mut elegida = &catalogo[0];
+        for criatura in catalogo.iter() {
+            if tirada < criatura.spawn_weight {
+                elegida = criatura;
                 break;
             }
-            roll -= template.spawn_weight;
+            tirada -= criatura.spawn_weight;
         }
 
-        let difficulty_bonus = (depth as i32 - 1) * 2;
+        let dificultad = (depth as i32 - 1) * 2;
 
         Entity {
             pos,
-            glyph: selected.glyph,
-            color: selected.color,
-            name: selected.name.to_string(),
+            glyph: elegida.glyph,
+            color: elegida.color,
+            name: elegida.short_name.to_string(),
             e_type: EntityType::Mob {
-                hp: selected.hp + difficulty_bonus,
-                max_hp: selected.hp + difficulty_bonus,
-                state: if selected.ai == EnemyAI::Wandering {
+                hp: elegida.base_hp + dificultad,
+                max_hp: elegida.base_hp + dificultad,
+                state: if elegida.ai == EnemyAI::Wandering {
                     EnemyState::Wandering
                 } else {
                     EnemyState::Asleep
                 },
-                ai: selected.ai.clone(),
-                min_dmg: selected.damage.0 + (difficulty_bonus / 4),
-                max_dmg: selected.damage.1 + (difficulty_bonus / 4),
-                defense: selected.defense + (difficulty_bonus / 6),
+                ai: elegida.ai.clone(),
+                min_dmg: elegida.base_damage.0 + (dificultad / 4),
+                max_dmg: elegida.base_damage.1 + (dificultad / 4),
+                defense: elegida.base_defense + (dificultad / 6),
                 pacified: false,
             },
             status_effects: Vec::new(),
