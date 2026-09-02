@@ -1,163 +1,232 @@
 # Soul 48: The Talking Dead
 
 ```text
- @@@@@@    @@@@@@   @@@  @@@  @@@                       @@@    @@@@@@   
-@@@@@@@   @@@@@@@@  @@@  @@@  @@@                      @@@@   @@@@@@@@  
-!@@       @@!  @@@  @@!  @@@  @@!                     @@!@!   @@!  @@@  
-!@!       !@!  @!@  !@!  @!@  !@!                    !@!!@!   !@!  @!@  
-!!@@!!    @!@  !@!  @!@  !@!  @!!       @!@!@!@!@   @!! @!!    !@!!@!   
- !!@!!!   !@!  !!!  !@!  !!!  !!!       !!!@!@!!!  !!!  !@!    !!@!!!   
-     !:!  !!:  !!!  !!:  !!!  !!:                  :!!:!:!!:  !!:  !!!  
-    !:!   :!:  !:!  :!:  !:!   :!:                 !:::!!:::  :!:  !:!  
-:::: ::   ::::: ::  ::::: ::   :: ::::                  :::   ::::: ::  
-:: : :     : :  :    : :  :   : :: : :                  :::    : :  :
+   ▄▀▀▀▄ ▄▀▀▀▄ █   █ █          ▄█  ▄▀▀▀▄
+   ▀▄▄▄  █   █ █   █ █        ▄▀ █  ▀▄▄▄▀
+   ▄   █ █   █ █   █ █        ▀▀▀█▀ █   █
+    ▀▀▀   ▀▀▀   ▀▀▀  ▀▀▀▀▀       ▀   ▀▀▀
+
+              t h e   t a l k i n g   d e a d
 ```
 
-**Soul 48** es una prueba de concepto (PoC) de un juego *roguelike* para terminal, desarrollado en Rust. Inspirado en la exploración de mazmorras y el combate por turnos, este proyecto utiliza la biblioteca `ratatui` para renderizar una interfaz de texto dinámica y atractiva.
+**Desocupado lector:** sin juramento me podrás creer que quisiera que aqueste juego,
+como hijo del entendimiento, fuera el más hermoso que imaginarse pudiera. Es **Soul 48**
+una prueba de ingenio —*roguelike* le dicen los que del arte entienden— labrada en Rust
+para que corra en la terminal desnuda, sin más pinturas que las que caben en una celda
+de letra. De la librería `ratatui` se vale para pintar cuanto se ve, que no es poco
+siendo tan poco con lo que cuenta.
 
-> Despiertas en el umbral, sin voz. No eres más que un eco de quien fuiste, un alma atada a un cuerpo que ya no respira. Cuarenta y ocho pisos más abajo, el Archidemonio del Silencio guarda lo que te arrebató y se burla de que no puedas nombrarlo. Para recuperar tu voz y tu destino, hay que bajar hasta él. Pero ten cuidado: en este dominio, hasta las paredes tienen algo que decir, y la muerte es solo el comienzo de una nueva conversación.
+## ❦ Argumento de la obra
 
-## 🚀 Características
+> Despierta vuesa merced en el umbral, y no halla voz con que quejarse. No es ya sino
+> eco de aquel que fue, ánima atada a cuerpo que ha dejado de respirar. Cuarenta y ocho
+> sótanos más abajo aguarda el Archidemonio del Silencio, que guarda lo que le quitó y
+> se ríe de que no pueda nombrarlo. Para cobrar su voz y su ventura, menester es bajar
+> hasta él. Mas tenga aviso: en aqueste dominio hasta las paredes tienen algo que decir,
+> y la muerte no es sino el comienzo de otra plática.
 
-- **Un Descenso en Cuatro Tramos:** Los 48 pisos se dividen en **Las Criptas** (1-12), **Las Catacumbas** (13-24), **El Abismo** (25-36) y **El Silencio** (37-48). Cada tramo tiene su paleta, su pool de criaturas, sus susurros y el Guardián que lo cierra. Un jefe cada seis pisos, y el Archidemonio del Silencio esperando en el 48.
-- **Victoria y Permadeath:** Matar al Archidemonio termina la corrida. La partida se guarda sola al cambiar de piso, pero morir —o ganar— disuelve el fragmento: no se recarga el piso anterior para volver a intentarlo.
-- **Generación Procedural de Mazmorras:** Cada nivel es único, con habitaciones, túneles y entidades distribuidas procedimentalmente.
-- **Sistema de Visión (FOV):** El mapa se revela a medida que exploras, manteniendo las áreas visitadas en un tono tenue.
-- **Entidades Narrativas Interactivas:**
-  - **Paredes Parlantes (`W`):** Murallas antiguas que susurran fragmentos de lore, advertencias y secretos.
-  - **Altáres de Ecos (`A`):** Estructuras místicas donde puedes ofrecer un pacto de sangre (5 HP) para revelar la totalidad del mapa del nivel.
-- **Retratos 8-bit:** Cada criatura del Compendio tiene su retrato, y el menú principal y el fin de partida tienen ilustración. Se dibujan con medio bloque (`▀`, U+2580): cada celda pinta dos píxeles verticales, el de arriba en color de frente y el de abajo en color de fondo, así que los píxeles quedan cuadrados y no se pierde ningún color. La rampa de tonos de cada retrato sale del color que la criatura ya tiene en el mapa.
-- **Sintonizar Alma:** Pantalla de ajustes con brillo de lo recordado, líneas del historial, glifos unicode/ASCII y guardado automático. Se guardan en `settings.json`.
-- **Sistema de Guardado y Carga de Partida:** Persistencia completa del estado del juego (`savegame.json`). Tu progreso se guarda automáticamente al salir y puedes reanudarlo en cualquier momento desde el menú principal (*RECOGER FRAGMENTOS*).
-- **Combate por Turnos:** Ataca a los enemigos moviéndote hacia ellos. El daño sale de tu arma más tu Fuerza, menos la defensa del enemigo; el suyo se descuenta con tu armadura y tu casco, y tu Agilidad te da una chance de esquivar.
-- **Enemigos que Doblan la Esquina:** Un campo de flujo calculado por BFS desde el héroe: los mobs rodean los muros en vez de trabarse contra ellos, y las puertas cerradas les cortan el paso igual que a vos. Dormidos, errantes, agresivos, cobardes y estáticos.
-- **Efectos de Estado en los Dos Sentidos:** Veneno, sangrado, quemadura, confusión y ceguera. La Serpiente envenena, el Heraldo te apaga la vista, y un enemigo envenenado se muere solo.
-- **Once Criaturas y Cinco Jefes** documentados en el Compendio, con las mismas estadísticas que te vas a cruzar en el mapa.
-- **Sistema de Inventario:** Recoge pociones, armas, llaves y otros objetos. Úsalos o descártalos según necesites.
-- **Entidades Interactivas:** Cofres cerrados que requieren llaves y escaleras para descender de piso.
-- **Persistencia entre Niveles:** Al descender conservás todo: salud, cordura, nivel, experiencia, atributos, las cinco ranuras de equipo y el inventario. Lo único que cambia es el piso.
-- **La Cordura Importa:** El medidor de voz baja solo con los turnos —tu Voluntad frena la caída— y por debajo del umbral la penumbra empieza a torcerte los pasos. En cero, el silencio te come el alma turno a turno.
-- **Salas Especiales con Contenido:** La Armería guarda armas y coraza, la Biblioteca pergaminos, y el Círculo Ritual un amuleto que cuesta caro alcanzar.
-- **Interfaz Gráfica en Terminal:** Construida con `ratatui`, ofrece una experiencia de juego clara y organizada.
-- **Soporte para Ratón:** Clic izquierdo en casillas visibles para inspeccionar entidades e información ambiental.
+## ❦ De las cosas notables que en esta obra se contienen
 
-## 📋 Requisitos
+**Del descenso, repartido en cuatro tramos.** Los cuarenta y ocho sótanos se dividen en
+**Las Criptas** (1-12), **Las Catacumbas** (13-24), **El Abismo** (25-36) y **El Silencio**
+(37-48). Cada tramo tiene su color, sus criaturas, sus susurros y el Guardián que lo cierra.
+Hállase un jefe cada seis pisos, y en el postrero aguarda el Archidemonio.
 
-Para compilar y ejecutar este proyecto, asegúrate de tener instalado lo siguiente:
+**De la victoria y de la muerte, que es sin remedio.** Quien matare al Archidemonio acaba
+la jornada y la acaba bien. Guárdase la partida sola al mudar de piso; empero, morir —o
+vencer— deshace el fragmento, que no se torna al sótano anterior para probar otra vez.
 
--   **Rust:** 1.87 o superior (el código usa `is_multiple_of`, estabilizado ahí). Puedes instalarlo desde [rust-lang.org](https://www.rust-lang.org/tools/install).
--   **Cargo:** El gestor de paquetes de Rust (incluido con la instalación de Rust).
--   **Herramientas de compilación:**
-    -   **Linux:** `build-essential` (o equivalente como `base-devel`).
-    -   **macOS:** Xcode Command Line Tools (`xcode-select --install`).
-    -   **Windows:** [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) con la carga de trabajo de C++.
--   **Git:** Para clonar el repositorio.
+**De cómo se labran los sótanos.** Ninguno es igual a otro: aposentos, túneles y criaturas
+se reparten por suerte, y por la misma suerte se apartan, que no queden dos cosas en una
+casilla ni nada encima de la escalera.
 
-## 🖥️ Fuente recomendada
+**De la vista, que es corta.** Descúbrese el mapa a medida que vuesa merced camina, y lo
+ya andado queda en un tono apagado, que la memoria no alumbra tanto como el ojo.
 
-El juego no elige la fuente: la elige tu terminal. Para que los muros, las barras y los
-retratos se vean como corresponde, la fuente necesita **box drawing** (`U+2500–257F`) y
-**block elements** (`U+2580–259F`).
+**De las presencias que hablan.** Las **Paredes de los Lamentos** (`W`) susurran secretos,
+avisos y mentiras, y cada tramo tiene las suyas. Los **Altares de Ecos** (`A`) revelan el
+piso entero a quien les ofrezca cinco puntos de su sangre.
 
-- **JetBrainsMono Nerd Font** — cubre todo lo necesario y es la opción segura.
-- Para el look 8-bit de verdad: **Cozette**, **unscii-16** (pensada para arte ASCII) o
-  **PxPlus IBM VGA 8x16** del *Ultimate Oldschool PC Font Pack*, que es literalmente la
-  fuente de los roguelikes de DOS.
-- **Poné el interlineado en 1.0.** Cualquier espacio extra entre líneas abre huecos
-  horizontales entre las filas de los retratos y arruina el efecto. Es el ajuste que más
-  importa.
+**De los retratos.** Cada criatura del Compendio tiene el suyo, y las dos pantallas de
+cierre su ilustración. Dibújanse con medio bloque (`▀`, U+2580): pinta cada celda dos
+píxeles verticales, el de arriba en color de frente y el de abajo en el de fondo, con que
+los píxeles salen cuadrados y no se pierde color ninguno. La rampa de tonos sale del mismo
+color que la criatura tiene en el mapa. Por la misma traza está hecho el título.
 
-Si tu fuente no tiene los glifos de caja, entrá a **SINTONIZAR ALMA** y poné `GLIFOS` en
-`ascii`: el mapa vuelve a `#` y `.`, las barras a `#` y `-`, y los retratos a caracteres
-planos, todo conservando el mismo tamaño en pantalla.
+**Del relato, que va rodando.** Bajo el título pasa la historia del difunto de derecha a
+izquierda, sin descanso: léela entera quien se quedare, y no ocupa sitio a quien no.
 
-## 🛠️ Cómo Compilar y Ejecutar
+**Del combate, que es por turnos.** Acomete vuesa merced al enemigo caminando hacia él. Sale
+el daño de su arma más su Fuerza, menos la defensa del contrario; y el que recibe se descuenta
+con la armadura y el yelmo, que su Agilidad le da esperanza de esquivarlo.
 
-Sigue estos pasos para poner en marcha el juego:
+**De los enemigos, que doblan la esquina.** Calcúlase un campo de flujo desde vuesa merced,
+con que las criaturas rodean los muros en lugar de trabarse contra ellos; y las puertas
+cerradas les cortan el paso lo mesmo que a vuesa merced. Háylas dormidas, errantes,
+agresivas, cobardes y quedas.
 
-1.  **Clona el repositorio:**
+**De los males que se pegan, y van en ambas direcciones.** Veneno, sangre, quemadura,
+confusión y ceguera. La Serpiente emponzoña, el Heraldo apaga la vista, y criatura
+emponzoñada se muere sola.
+
+**De once criaturas y cinco jefes**, todos asentados en el Compendio con las mesmas
+cuentas que vuesa merced habrá de hallar en el mapa, que no le mienta el libro.
+
+**De la cordura, que importa y mucho.** Baja sola con los turnos —su Voluntad detiene la
+caída— y por debajo del umbral la penumbra le empieza a torcer los pasos. En llegando a
+cero, el silencio le come el ánima turno a turno.
+
+**De los aposentos señalados.** La Armería guarda armas y coraza, la Biblioteca pergaminos,
+y el Círculo Ritual un amuleto que cuesta caro alcanzar.
+
+**De lo que se lleva y lo que queda.** Al bajar conserva vuesa merced todo: salud, cordura,
+nivel, experiencia, atributos, las cinco piezas de equipo y cuanto carga. Lo único que muda
+es el sótano.
+
+**De la hacienda.** Recoja pociones, armas, llaves y lo demás; úselo o déjelo caer según le
+convenga. Los cofres cerrados piden llave, y las escaleras, decisión.
+
+**De sintonizar el ánima.** Pantalla de ajustes con el brillo de lo recordado, las líneas
+del historial, los glifos unicode o llanos y el guardado. Asiéntanse en `settings.json`.
+
+**Del ratón.** Clic izquierdo sobre casilla visible, y dirásele a vuesa merced qué hay en ella.
+
+## ❦ De lo que es menester tener antes de comenzar
+
+-   **Rust:** 1.87 o superior (usa el código `is_multiple_of`, que allí se asentó).
+    Hállase en [rust-lang.org](https://www.rust-lang.org/tools/install).
+-   **Cargo:** que viene con Rust y no se pide aparte.
+-   **Herramientas de fábrica:**
+    -   **Linux:** `build-essential`, o su equivalente `base-devel`.
+    -   **macOS:** las Xcode Command Line Tools (`xcode-select --install`).
+    -   **Windows:** las [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+        con la carga de C++.
+-   **Git:** para traer el repositorio.
+
+## ❦ De la letra y del molde
+
+No escoge el juego la letra: escógela la terminal de vuesa merced. Para que los muros, las
+barras y los retratos salgan como es debido, ha menester la letra de **box drawing**
+(`U+2500–257F`) y de **block elements** (`U+2580–259F`).
+
+- **JetBrainsMono Nerd Font** — cúbrelo todo, y es la elección segura.
+- Para el aire de ocho bits verdadero: **Cozette**, **unscii-16** (pensada para arte de
+  caracteres) o **PxPlus IBM VGA 8x16** del *Ultimate Oldschool PC Font Pack*, que es
+  literalmente la letra de los roguelikes de DOS.
+- **Póngase el interlineado en 1.0.** Cualquier holgura de más entre renglones abre huecos
+  entre las filas de los retratos y da al traste con el efecto. Es el ajuste que más monta.
+
+Si la letra de vuesa merced careciere de los glifos de caja, entre en **SINTONIZAR ALMA** y
+ponga `GLIFOS` en `ascii`: tórnase el mapa a `#` y `.`, las barras a `#` y `-`, y los
+retratos a caracteres llanos, guardando todo el mesmo tamaño en pantalla.
+
+## ❦ De cómo se ha de fabricar y poner en obra
+
+1.  **Tráigase el repositorio:**
     ```bash
     git clone https://github.com/narquileerrado/soul48.git
     cd soul48
     ```
 
-2.  **Compila el proyecto:**
+2.  **Fabríquese:**
     ```bash
     cargo build --release
     ```
-    *Nota: El ejecutable se generará en `target/release/soul48`.*
+    *El ejecutable queda en `target/release/soul48`.*
 
-3.  **Ejecuta el juego:**
+3.  **Póngase en obra:**
     ```bash
     cargo run --release
     ```
-    *También puedes ejecutar el binario directamente una vez compilado.*
+    *Puede asimismo llamarse al binario derechamente, una vez fabricado.*
 
-- **Bestiario:** Consulta información detallada y el trasfondo narrativo de las criaturas que encuentres en el Compendio.
+## ❦ Del gobierno de las teclas
 
-## 🎮 Controles
+### En el menú principal
+- **Flechas arriba y abajo:** andar por las opciones.
+- **Enter:** escoger.
+- **Q / Esc:** volver al silencio.
 
-### Menú Principal
-- **Flechas Arriba/Abajo:** Navegar por las opciones.
-- **Enter:** Seleccionar una opción.
-- **Q / Esc:** Salir del juego.
-
-### Durante el Juego
-- **Flechas de Dirección:** Mover al personaje y atacar enemigos.
-- **Q / Esc:** Salir al menú principal (desde el Bestiario) o cerrar el juego.
-- **D:** Activar/desactivar el **modo Descartar**.
+### Durante la jornada
+- **Flechas:** caminar, y acometer al enemigo caminando hacia él.
+- **E:** embestida, que aparta al contrario de un empujón.
+- **B:** bloqueo, que parte en dos el golpe que viniere.
+- **D:** entrar y salir del **modo descartar**.
 - **1-9:**
-    - **Modo Normal:** Usar o equipar el objeto correspondiente del inventario.
-    - **Modo Descartar:** Dejar el objeto en el suelo.
-- **S / Enter:** Confirmar para descender por las escaleras (cuando se te pregunte). La partida se guarda sola al bajar.
-- **N / Esc:** Cancelar el descenso.
-- **Clic Izquierdo del Ratón:** Inspeccionar una casilla visible en el mapa para obtener información en el historial.
+    - **De ordinario:** usar o vestir la pieza que corresponda.
+    - **En modo descartar:** dejarla en el suelo.
+- **S / Enter:** confirmar el descenso cuando se le preguntare. Guárdase la partida sola.
+- **N / Esc:** quedarse en el piso.
+- **Q / Esc:** cerrar el juego.
+- **Clic izquierdo:** mirar una casilla visible, y sabráse qué hay en ella.
 
-### Bestiario
-- **Flechas Arriba/Abajo:** Seleccionar una criatura.
-- **Q / Esc:** Volver al menú principal.
+### En el Compendio
+- **Flechas arriba y abajo:** escoger criatura.
+- **Q / Esc:** tornar al menú principal.
 
-### Pantallas de Cierre
+### En las pantallas de cierre
 Al caer (**FIN DE LA PARTIDA**) o al vencer al Archidemonio (**EL ORIGEN**):
-- **R:** Empezar otra bajada desde el piso 1.
-- **Q / Esc:** Salir del juego.
+- **R:** emprender otra bajada desde el primer sótano.
+- **Q / Esc:** salir.
 
-En los dos casos el fragmento guardado se disuelve: la corrida es de ida.
+En ambos casos se deshace el fragmento guardado: la jornada es de ida.
 
-## 📂 Estructura del Proyecto
+## ❦ De la traza y repartimiento de los papeles
 
-El crate expone una biblioteca (`src/lib.rs`) y un binario delgado, para que los
-tests de integración de `tests/` puedan armar partidas completas.
+Expone el crate una biblioteca (`src/lib.rs`) y un binario delgado, para que las pruebas de
+`tests/` puedan armar partidas enteras.
 
--   `main.rs`: Punto de entrada. Prende y apaga la terminal, dibuja la pantalla que corresponde al estado y despacha cada tecla. Nada más.
--   `game/`: El núcleo de la lógica, un archivo por sistema: `mod.rs` (estado y turno), `interaction.rs` (choques contra entidades), `combat.rs`, `inventory.rs`, `ai.rs`, `pathing.rs` (el campo de flujo que usan los enemigos para encontrarte), `fov.rs`, `map.rs` y `save.rs`.
--   `ui/`: El dibujo, un archivo por pantalla: `widgets.rs` (piezas compartidas), `juego.rs`, `compendio.rs`, `opciones.rs` y `final_.rs` (las dos pantallas de cierre).
--   `world/`: Cómo está hecho cada piso. `map_builder.rs` excava habitaciones y túneles y reparte entidades; `tramo.rs` define los cuatro tramos del descenso, con su paleta, sus voces y su Guardián.
--   `bestiary.rs`: El catálogo de criaturas. Es la **única** fuente: de acá salen los mobs que genera el mapa, los jefes y las fichas del Compendio, así que lo que leés en el compendio es lo que te vas a cruzar.
--   `title.rs`: Se encarga exclusivamente de la lógica y presentación de la pantalla de título y el menú principal.
--   `player.rs`: El héroe: sus números, sus atributos, sus cinco ranuras de equipo y todo lo que de ellos se deriva.
--   `balance.rs`: Los números que definen cómo se siente el juego, agrupados por tema. El balance se ajusta acá sin leer la lógica.
--   `input.rs`: Traducción de teclas a intenciones, una por pantalla.
--   `menus.rs`: Los cursores de las pantallas con lista.
--   `settings.rs`: Los ajustes del jugador y su persistencia en `settings.json`.
--   `theme.rs`: El sistema de color. Cada color tiene un significado y uno solo.
--   `sprite.rs` y `arte.rs`: Los retratos 8-bit y cómo se dibujan con medio bloque.
+-   `main.rs`: la puerta. Enciende y apaga la terminal, pinta la pantalla que toca al estado
+    y reparte cada tecla. Nada más.
+-   `game/`: el corazón de la lógica, un fichero por sistema: `mod.rs` (estado y turno),
+    `interaction.rs` (los choques contra las cosas), `combat.rs`, `inventory.rs`, `ai.rs`,
+    `pathing.rs` (el campo de flujo con que las criaturas hallan a vuesa merced), `fov.rs`,
+    `map.rs` y `save.rs`.
+-   `ui/`: el dibujo, un fichero por pantalla: `widgets.rs` (las piezas comunes), `juego.rs`,
+    `compendio.rs`, `opciones.rs` y `final_.rs` (las dos de cierre).
+-   `world/`: cómo está hecho cada sótano. `map_builder.rs` cava aposentos y túneles y reparte
+    lo que en ellos vive; `tramo.rs` asienta los cuatro tramos, con su color, sus voces y su
+    Guardián.
+-   `bestiary.rs`: el catálogo de las criaturas. Es la **única** fuente: de aquí salen las que
+    el mapa engendra, los jefes y las fichas del Compendio, con que lo que se lee en el libro
+    es lo que se topa en el camino.
+-   `title.rs`: la pantalla de título, el menú y el relato que va rodando.
+-   `player.rs`: el difunto —sus cuentas, sus atributos, sus cinco piezas de equipo y cuanto
+    de ellas se deriva.
+-   `balance.rs`: los números que gobiernan cómo se siente el juego, juntos y por materias.
+    Ajústase el balance aquí sin leer la lógica.
+-   `input.rs`: la traducción de teclas a intenciones, una por pantalla.
+-   `menus.rs`: los cursores de las pantallas con lista.
+-   `settings.rs`: los ajustes y su asiento en `settings.json`.
+-   `theme.rs`: el sistema de color. Cada color tiene un significado, y uno solo.
+-   `sprite.rs` y `arte.rs`: los retratos de ocho bits y la traza con que se dibujan.
 
-## 🧪 Tests
+## ❦ De las pruebas y experiencias
 
 ```bash
-cargo test                                   # todo
+cargo test                                   # todas
 cargo fmt --check && cargo clippy --all-targets -- -D warnings
 ```
 
--   `tests/basicos.rs`: mecánicas puntuales.
--   `tests/mecanicas.rs`: escenarios de varios turnos sobre una sala controlada (`App::arena`), reproducibilidad de la semilla y una partida larga que verifica invariantes.
--   `tests/pantallas.rs`: render de cada pantalla sobre el backend de prueba de `ratatui`, incluida una terminal de 40x15, y que cada tramo se vea distinto.
+-   `tests/basicos.rs`: mecánicas sueltas, los tramos y los retratos.
+-   `tests/mecanicas.rs`: lances de varios turnos sobre una sala gobernada (`App::arena`), la
+    fidelidad de la semilla y una partida larga que vigila que nada se desmande.
+-   `tests/pantallas.rs`: el dibujo de cada pantalla sobre el backend de prueba de `ratatui`,
+    incluida una terminal de 40x15, y que cada tramo se vea distinto del anterior.
 
-Entre ellos hay un descenso completo hasta el piso 48 que verifica que los 48 pisos se generen, que ninguno salga desierto y que los cuatro Guardianes aparezcan donde corresponde.
+Hállase entre ellas un descenso entero hasta el sótano cuarenta y ocho, que comprueba que los
+cuarenta y ocho se labren, que ninguno salga desierto y que los cuatro Guardianes aparezcan
+donde deben.
 
-## 📚 Dependencias
+## ❦ De a quién se deben las herramientas
 
--   [`ratatui`](https://crates.io/crates/ratatui): Para la creación de la interfaz de usuario en la terminal.
--   [`crossterm`](https://crates.io/crates/crossterm): Para el manejo de eventos y manipulación de la terminal.
--   [`rand`](https://crates.io/crates/rand) y [`rand_chacha`](https://crates.io/crates/rand_chacha): Para la generación de números aleatorios (usado en la creación de mazmorras y cálculo de daño).
+-   [`ratatui`](https://crates.io/crates/ratatui): para levantar la interfaz en la terminal.
+-   [`crossterm`](https://crates.io/crates/crossterm): para el gobierno de la terminal y sus sucesos.
+-   [`rand`](https://crates.io/crates/rand) y [`rand_chacha`](https://crates.io/crates/rand_chacha):
+    para la suerte, que labra los sótanos y reparte los golpes.
+-   [`serde`](https://crates.io/crates/serde) y [`serde_json`](https://crates.io/crates/serde_json):
+    para asentar la partida y los ajustes en disco.
+
+---
+
+*Vale.*
