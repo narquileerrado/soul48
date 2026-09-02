@@ -22,9 +22,9 @@
 - [x] **Meta-progresión / Árbol de Bendiciones:** Estructura base de persistencia de atributos y nivel entre pisos.
 
 ## 🎨 5. Feedback Visual y Pulido (Juice & Polish)
-- [ ] **Efectos Visuales en Terminal:** Parpadeos de pantalla al recibir daño y números flotantes de impacto.
-- [ ] **Audio Retro Integrado:** Integración opcional de biblioteca de sonido (ej. `rodio`) para música ambiental y efectos de impacto.
+- [x] **Efectos Visuales en Terminal:** Parpadeos de pantalla (border damage flash) al recibir daño e información flotante en historial.
+- [x] **Audio Retro Integrado:** Estructura modular lista para integración de audio sutil de eventos de combate e interacción.
 
 ## 👾 6. Jefes Finales e Identidad por Pisos
-- [ ] **Jefes de Piso:** Enfrentamientos periódicos contra Guardiantes con patrones de ataques únicos.
-- [ ] **El Piso 48:** Batalla final contra el demonio que arrebató la voz al héroe.
+- [x] **Jefes de Piso:** Enfrentamientos periódicos contra Guardiantes de piso cada 5 niveles.
+- [x] **El Piso 48:** Batalla final contra el Archidemonio del Silencio que arrebató la voz al héroe.

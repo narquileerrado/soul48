@@ -198,6 +198,47 @@ impl MapBuilder {
             }
         }
 
+        // Colocación especial de Boss en el Piso 48 (Archidemonio) o en Pisos Múltiplos de 5
+        if depth == 48 && !rooms.is_empty() {
+            let boss_pos = rooms.last().unwrap().center();
+            entities.push(Entity {
+                pos: boss_pos,
+                glyph: 'D',
+                color: Color::LightRed,
+                name: "ARCHIDEMONIO DEL SILENCIO".into(),
+                e_type: EntityType::Mob {
+                    hp: 150,
+                    max_hp: 150,
+                    state: EnemyState::Aggressive,
+                    ai: EnemyAI::Melee,
+                    min_dmg: 8,
+                    max_dmg: 16,
+                    defense: 6,
+                    pacified: false,
+                },
+                status_effects: Vec::new(),
+            });
+        } else if depth % 5 == 0 && rooms.len() > 1 {
+            let boss_pos = rooms.last().unwrap().center();
+            entities.push(Entity {
+                pos: boss_pos,
+                glyph: 'B',
+                color: Color::Rgb(255, 60, 60),
+                name: format!("Guardián del Piso {}", depth),
+                e_type: EntityType::Mob {
+                    hp: 50 + (depth as i32 * 3),
+                    max_hp: 50 + (depth as i32 * 3),
+                    state: EnemyState::Aggressive,
+                    ai: EnemyAI::Melee,
+                    min_dmg: 5 + (depth as i32 / 2),
+                    max_dmg: 10 + (depth as i32 / 2),
+                    defense: 4 + (depth as i32 / 5),
+                    pacified: false,
+                },
+                status_effects: Vec::new(),
+            });
+        }
+
         // Colocación estratégica de cofres y llaves
         if rooms.len() > 2 {
             let chest_pos = rooms[1].center();

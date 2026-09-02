@@ -184,6 +184,7 @@ pub struct SaveData {
     pub hero_status_effects: Vec<StatusEffect>,
     pub parry_active: bool,
     pub invisible_turns: usize,
+    pub damage_flash_turns: usize,
     pub equipped_weapon: Option<(String, i32, i32)>,
     pub equipped_armor: Option<(String, i32)>,
     pub equipped_helmet: Option<(String, i32)>,
@@ -215,6 +216,7 @@ pub struct App {
     pub hero_status_effects: Vec<StatusEffect>,
     pub parry_active: bool,
     pub invisible_turns: usize,
+    pub damage_flash_turns: usize,
     pub equipped_weapon: Option<(String, i32, i32)>,
     pub equipped_armor: Option<(String, i32)>,
     pub equipped_helmet: Option<(String, i32)>,
@@ -287,6 +289,7 @@ impl App {
             hero_status_effects: Vec::new(),
             parry_active: false,
             invisible_turns: 0,
+            damage_flash_turns: 0,
             equipped_weapon: weapon,
             equipped_armor: None,
             equipped_helmet: None,
@@ -956,7 +959,11 @@ impl App {
             }
         }
 
-        // Decrementar invisibilidad
+        // Decrementar invisibilidad y parpadeo de daño
+        if self.damage_flash_turns > 0 {
+            self.damage_flash_turns -= 1;
+        }
+
         if self.invisible_turns > 0 {
             self.invisible_turns -= 1;
             if self.invisible_turns == 0 {
@@ -1034,6 +1041,7 @@ impl App {
                                 ));
                             }
                             self.hero_hp = (self.hero_hp - dmg).max(0);
+                            self.damage_flash_turns = 1;
                         }
                     } else {
                         match ai {
@@ -1182,6 +1190,7 @@ impl App {
             hero_status_effects: self.hero_status_effects.clone(),
             parry_active: self.parry_active,
             invisible_turns: self.invisible_turns,
+            damage_flash_turns: self.damage_flash_turns,
             equipped_weapon: self.equipped_weapon.clone(),
             equipped_armor: self.equipped_armor.clone(),
             equipped_helmet: self.equipped_helmet.clone(),
@@ -1230,6 +1239,7 @@ impl App {
             hero_status_effects: save_data.hero_status_effects,
             parry_active: save_data.parry_active,
             invisible_turns: save_data.invisible_turns,
+            damage_flash_turns: save_data.damage_flash_turns,
             equipped_weapon: save_data.equipped_weapon,
             equipped_armor: save_data.equipped_armor,
             equipped_helmet: save_data.equipped_helmet,
@@ -1642,5 +1652,13 @@ mod tests {
         assert!(app.use_item(0));
         assert!(app.inventory.is_empty());
         assert_eq!(app.equipped_armor, Some(("Cota de Malla".to_string(), 4)));
+    }
+
+    #[test]
+    fn test_floor_48_boss_encounter() {
+        let app = App::new(Some(12345), None, None, 48, None);
+        assert_eq!(app.depth, 48);
+        let boss_exists = app.entities.iter().any(|e| e.name == "ARCHIDEMONIO DEL SILENCIO");
+        assert!(boss_exists);
     }
 }

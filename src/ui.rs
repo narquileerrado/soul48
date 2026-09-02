@@ -24,7 +24,11 @@ pub fn ui(f: &mut Frame, app: &App) {
         .constraints([Constraint::Length(7), Constraint::Min(0)])
         .split(top_chunks[1]);
 
-    let ui_style = Style::default().fg(Color::Cyan);
+    let ui_style = if app.damage_flash_turns > 0 {
+        Style::default().fg(Color::Red)
+    } else {
+        Style::default().fg(Color::Cyan)
+    };
 
     // Renderizado procedimental del mapa basado en el Campo de Visión (FOV)
     let map_lines: Vec<Line> = app
