@@ -1,8 +1,1 @@
 /target
-
-# estado de la partida y preferencias, no del proyecto
-savegame.json
-settings.json
-
-# el canvas de diseño publicado se genera con la herramienta (2,6 MB)
-design/interfaz-soul48.html
