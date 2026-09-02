@@ -9,9 +9,7 @@ impl App {
         let hx = self.player.pos.x as isize;
         let hy = self.player.pos.y as isize;
         for row in &mut self.visible {
-            for val in row {
-                *val = false;
-            }
+            row.fill(false);
         }
         // con los ojos apagados el mundo se achica a lo que tenés encima
         let radio = if self.player.tiene(&StatusEffectType::Blindness) {
