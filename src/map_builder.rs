@@ -1,4 +1,4 @@
-use crate::app::{EnemyAI, EnemyState, Entity, EntityType, Point, ScrollType};
+use crate::app::{EnemyAI, EnemyState, Entity, EntityType, HazardType, Point, ScrollType, SpecialRoomType};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ratatui::style::Color;
@@ -173,6 +173,69 @@ impl MapBuilder {
                 color: Color::Rgb(200, 200, 0),
                 name: "Llave de Hierro".into(),
                 e_type: EntityType::Key,
+                status_effects: Vec::new(),
+            });
+        }
+
+        // Generación de Puertas en entradas de habitaciones
+        for room in rooms.iter().skip(1) {
+            let door_pos = Point::new(room.x1, room.center().y);
+            if map[door_pos.y][door_pos.x] == '.' {
+                let is_locked = rng.gen_bool(0.2);
+                let is_secret = rng.gen_bool(0.1);
+                entities.push(Entity {
+                    pos: door_pos,
+                    glyph: if is_secret { '║' } else if is_locked { '+' } else { '+' },
+                    color: if is_locked { Color::Red } else { Color::Rgb(160, 100, 40) },
+                    name: if is_secret { "Muro Sospechoso".into() } else if is_locked { "Puerta Cerrada con Llave".into() } else { "Puerta de Madera".into() },
+                    e_type: EntityType::Door {
+                        locked: is_locked,
+                        secret: is_secret,
+                        open: false,
+                    },
+                    status_effects: Vec::new(),
+                });
+            }
+        }
+
+        // Generación de Peligros Ambientales (Pinchos, Ácido, Fuego, Aceite)
+        for room in rooms.iter().skip(1) {
+            if rng.gen_bool(0.3) {
+                let h_pos = Point::new(room.x1 + 1, room.y1 + 1);
+                if map[h_pos.y][h_pos.x] == '.' {
+                    let (h_type, glyph, color, name) = match rng.gen_range(0..4) {
+                        0 => (HazardType::Spikes, '^', Color::DarkGray, "Trampa de Pinchos"),
+                        1 => (HazardType::Acid, '~', Color::Green, "Pozo de Ácido"),
+                        2 => (HazardType::Oil, 'o', Color::Rgb(100, 100, 50), "Charco de Aceite"),
+                        _ => (HazardType::Fire, '&', Color::Red, "Fuego"),
+                    };
+                    entities.push(Entity {
+                        pos: h_pos,
+                        glyph,
+                        color,
+                        name: name.into(),
+                        e_type: EntityType::Hazard { hazard_type: h_type },
+                        status_effects: Vec::new(),
+                    });
+                }
+            }
+        }
+
+        // Generación de Salas Especiales (Armería, Biblioteca, Círculo Ritual)
+        if rooms.len() > 5 {
+            let s_room = &rooms[5];
+            let marker_pos = s_room.center();
+            let room_type = match rng.gen_range(0..3) {
+                0 => SpecialRoomType::Armory,
+                1 => SpecialRoomType::Library,
+                _ => SpecialRoomType::RitualCircle,
+            };
+            entities.push(Entity {
+                pos: marker_pos,
+                glyph: 'R',
+                color: Color::Rgb(255, 215, 0),
+                name: "Marca de Sala Especial".into(),
+                e_type: EntityType::SpecialRoomMarker { room_type },
                 status_effects: Vec::new(),
             });
         }

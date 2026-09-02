@@ -62,6 +62,32 @@ pub enum EntityType {
     Scroll {
         scroll_type: ScrollType,
     },
+    Door {
+        locked: bool,
+        secret: bool,
+        open: bool,
+    },
+    Hazard {
+        hazard_type: HazardType,
+    },
+    SpecialRoomMarker {
+        room_type: SpecialRoomType,
+    },
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum HazardType {
+    Spikes,
+    Acid,
+    Oil,
+    Fire,
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum SpecialRoomType {
+    Armory,
+    Library,
+    RitualCircle,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -382,6 +408,80 @@ impl App {
                     }
                 } else {
                     self.add_log("> El Altar de Ecos ha consumido su tributo.".into(), LogType::Info);
+                }
+            }
+            EntityType::Door { locked, secret, open } => {
+                if *open {
+                    move_allowed = true;
+                } else if *locked {
+                    move_allowed = false;
+                    if let Some(k_idx) = self.inventory.iter().position(|(i, _)| i.name == "Llave de Hierro") {
+                        if self.inventory[k_idx].1 > 1 {
+                            self.inventory[k_idx].1 -= 1;
+                        } else {
+                            self.inventory.remove(k_idx);
+                        }
+                        *locked = false;
+                        *open = true;
+                        entity_clone.glyph = '\'';
+                        entity_clone.name = "Puerta Abierta".into();
+                        self.add_log("> Desbloqueas y abres la puerta con la llave.".into(), LogType::Info);
+                        self.entities[index] = entity_clone;
+                    } else {
+                        self.add_log("> La puerta está cerrada con llave.".into(), LogType::Warning);
+                    }
+                } else {
+                    move_allowed = false;
+                    let is_sec = *secret;
+                    *open = true;
+                    entity_clone.glyph = '\'';
+                    entity_clone.name = if is_sec { "Pasaje Secreto Revelado".into() } else { "Puerta Abierta".into() };
+                    self.add_log(if is_sec { "> ¡Descubres un pasaje secreto!".into() } else { "> Abres la puerta.".into() }, LogType::Info);
+                    self.entities[index] = entity_clone;
+                }
+            }
+            EntityType::Hazard { hazard_type } => {
+                move_allowed = true;
+                match hazard_type {
+                    HazardType::Spikes => {
+                        self.hero_hp = (self.hero_hp - 4).max(0);
+                        self.add_log("> TRAMPA DE PINCHOS: ¡Sufres 4 de daño!".into(), LogType::Warning);
+                    }
+                    HazardType::Acid => {
+                        self.hero_hp = (self.hero_hp - 6).max(0);
+                        self.hero_status_effects.push(StatusEffect {
+                            effect_type: StatusEffectType::Poison,
+                            duration: 3,
+                            damage_per_turn: 2,
+                        });
+                        self.add_log("> POZO DE ÁCIDO: ¡Sufres 6 daño y te envenenas!".into(), LogType::Warning);
+                    }
+                    HazardType::Oil => {
+                        self.add_log("> CHARCO DE ACEITE: El suelo resbaladizo dificulta tus pasos.".into(), LogType::Info);
+                    }
+                    HazardType::Fire => {
+                        self.hero_hp = (self.hero_hp - 8).max(0);
+                        self.hero_status_effects.push(StatusEffect {
+                            effect_type: StatusEffectType::Burn,
+                            duration: 2,
+                            damage_per_turn: 3,
+                        });
+                        self.add_log("> FUEGO: ¡Sufres 8 daño y te quemas!".into(), LogType::Warning);
+                    }
+                }
+            }
+            EntityType::SpecialRoomMarker { room_type } => {
+                move_allowed = true;
+                match room_type {
+                    SpecialRoomType::Armory => {
+                        self.add_log("> ENTRANDO A LA ARMERÍA: El olor a metal templado llena el aire.".into(), LogType::Info);
+                    }
+                    SpecialRoomType::Library => {
+                        self.add_log("> ENTRANDO A LA BIBLIOTECA: Pergaminos arcanos descansan en los estantes.".into(), LogType::Info);
+                    }
+                    SpecialRoomType::RitualCircle => {
+                        self.add_log("> CIRCULO RITUAL: Sientes un escalofrío de energía oscura.".into(), LogType::Warning);
+                    }
                 }
             }
             EntityType::Item | EntityType::Key | EntityType::Weapon { .. } | EntityType::Scroll { .. } => {
@@ -1283,5 +1383,63 @@ mod tests {
         if let EntityType::Mob { hp, .. } = app.entities.last().unwrap().e_type {
             assert_eq!(hp, 8); // 20 - 12 = 8
         }
+    }
+
+    #[test]
+    fn test_door_interaction() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+
+        let door_pos = Point::new(app.hero_pos.x + 1, app.hero_pos.y);
+        app.map[door_pos.y][door_pos.x] = '.';
+        app.entities.push(Entity {
+            pos: door_pos,
+            glyph: '+',
+            color: Color::Yellow,
+            name: "Puerta de Madera".to_string(),
+            e_type: EntityType::Door {
+                locked: false,
+                secret: false,
+                open: false,
+            },
+            status_effects: Vec::new(),
+        });
+
+        // First bump opens door
+        let action = app.try_move(1, 0);
+        assert!(action);
+        if let EntityType::Door { open, .. } = app.entities.last().unwrap().e_type {
+            assert!(open);
+        } else {
+            panic!("Expected Door entity");
+        }
+
+        // Second bump moves hero onto opened door tile
+        let moved = app.try_move(1, 0);
+        assert!(moved);
+        assert_eq!(app.hero_pos, door_pos);
+    }
+
+    #[test]
+    fn test_hazard_interaction() {
+        let mut app = App::new(Some(12345), None, None, 1, None);
+        app.start_new_game();
+
+        let hazard_pos = Point::new(app.hero_pos.x + 1, app.hero_pos.y);
+        app.map[hazard_pos.y][hazard_pos.x] = '.';
+        app.entities.push(Entity {
+            pos: hazard_pos,
+            glyph: '^',
+            color: Color::DarkGray,
+            name: "Trampa de Pinchos".to_string(),
+            e_type: EntityType::Hazard { hazard_type: HazardType::Spikes },
+            status_effects: Vec::new(),
+        });
+
+        let initial_hp = app.hero_hp;
+        let action = app.try_move(1, 0);
+        assert!(action);
+        assert_eq!(app.hero_pos, hazard_pos);
+        assert_eq!(app.hero_hp, initial_hp - 4);
     }
 }
