@@ -27,11 +27,13 @@
 - **Retratos 8-bit:** Cada criatura del Compendio tiene su retrato, y el menú principal y el fin de partida tienen ilustración. Se dibujan con medio bloque (`▀`, U+2580): cada celda pinta dos píxeles verticales, el de arriba en color de frente y el de abajo en color de fondo, así que los píxeles quedan cuadrados y no se pierde ningún color. La rampa de tonos de cada retrato sale del color que la criatura ya tiene en el mapa.
 - **Sintonizar Alma:** Pantalla de ajustes con brillo de lo recordado, líneas del historial, glifos unicode/ASCII y guardado automático. Se guardan en `settings.json`.
 - **Sistema de Guardado y Carga de Partida:** Persistencia completa del estado del juego (`savegame.json`). Tu progreso se guarda automáticamente al salir y puedes reanudarlo en cualquier momento desde el menú principal (*RECOGER FRAGMENTOS*).
-- **Combate por Turnos:** Ataca a los enemigos moviéndote hacia ellos. El daño se calcula según tu arma equipada y defensas.
+- **Combate por Turnos:** Ataca a los enemigos moviéndote hacia ellos. El daño sale de tu arma más tu Fuerza, menos la defensa del enemigo; el suyo se descuenta con tu armadura y tu casco, y tu Agilidad te da una chance de esquivar.
 - **Enemigos con IA Adaptativa:** Mobs dormidos, errantes, agresivos, cobardes y estáticos (mímicos).
 - **Sistema de Inventario:** Recoge pociones, armas, llaves y otros objetos. Úsalos o descártalos según necesites.
 - **Entidades Interactivas:** Cofres cerrados que requieren llaves y escaleras para descender de piso.
-- **Persistencia entre Niveles:** Tu salud, equipo e inventario se conservan al descender de piso.
+- **Persistencia entre Niveles:** Al descender conservás todo: salud, cordura, nivel, experiencia, atributos, las cinco ranuras de equipo y el inventario. Lo único que cambia es el piso.
+- **La Cordura Importa:** El medidor de voz baja solo con los turnos —tu Voluntad frena la caída— y por debajo del umbral la penumbra empieza a torcerte los pasos. En cero, el silencio te come el alma turno a turno.
+- **Salas Especiales con Contenido:** La Armería guarda armas y coraza, la Biblioteca pergaminos, y el Círculo Ritual un amuleto que cuesta caro alcanzar.
 - **Interfaz Gráfica en Terminal:** Construida con `ratatui`, ofrece una experiencia de juego clara y organizada.
 - **Soporte para Ratón:** Clic izquierdo en casillas visibles para inspeccionar entidades e información ambiental.
 
@@ -117,14 +119,33 @@ Sigue estos pasos para poner en marcha el juego:
 
 ## 📂 Estructura del Proyecto
 
-El código fuente está organizado en los siguientes módulos:
+El crate expone una biblioteca (`src/lib.rs`) y un binario delgado, para que los
+tests de integración de `tests/` puedan armar partidas completas.
 
--   `main.rs`: Punto de entrada de la aplicación. Gestiona el bucle principal, la inicialización de la terminal (Crossterm) y el despacho de eventos de teclado y ratón.
--   `app.rs`: Define el núcleo de la lógica del juego, incluyendo el estado global (`App`), sistemas de combate, movimiento, inventario y gestión de entidades.
+-   `main.rs`: Punto de entrada. Prende y apaga la terminal, dibuja la pantalla que corresponde al estado y despacha cada tecla. Nada más.
+-   `game/`: El núcleo de la lógica, un archivo por sistema: `mod.rs` (estado y turno), `interaction.rs` (choques contra entidades), `combat.rs`, `inventory.rs`, `ai.rs`, `fov.rs`, `map.rs` y `save.rs`.
+-   `ui/`: El dibujo, un archivo por pantalla: `widgets.rs` (piezas compartidas), `juego.rs`, `compendio.rs` y `opciones.rs`.
 -   `map_builder.rs`: Responsable de la generación procedimental de los niveles. Implementa el algoritmo de excavación de habitaciones y túneles, así como la colocación aleatoria de enemigos y objetos.
--   `bestiary.rs`: Contiene las definiciones y descripciones narrativas de todas las criaturas del juego, integrando datos mecánicos con el trasfondo del mundo.
--   `ui.rs`: Gestiona el renderizado visual utilizando `ratatui`. Dibuja el mapa, la interfaz lateral (HUD), los menús de inventario y la pantalla de fin de juego.
+-   `bestiary.rs`: El catálogo de criaturas. Es la **única** fuente: de acá salen tanto los mobs que genera el mapa como las fichas del Compendio, así que lo que leés en el compendio es lo que te vas a cruzar.
 -   `title.rs`: Se encarga exclusivamente de la lógica y presentación de la pantalla de título y el menú principal.
+-   `player.rs`: El héroe: sus números, sus atributos, sus cinco ranuras de equipo y todo lo que de ellos se deriva.
+-   `balance.rs`: Los números que definen cómo se siente el juego, agrupados por tema. El balance se ajusta acá sin leer la lógica.
+-   `input.rs`: Traducción de teclas a intenciones, una por pantalla.
+-   `menus.rs`: Los cursores de las pantallas con lista.
+-   `settings.rs`: Los ajustes del jugador y su persistencia en `settings.json`.
+-   `theme.rs`: El sistema de color. Cada color tiene un significado y uno solo.
+-   `sprite.rs` y `arte.rs`: Los retratos 8-bit y cómo se dibujan con medio bloque.
+
+## 🧪 Tests
+
+```bash
+cargo test                                   # todo
+cargo fmt --check && cargo clippy -- -D warnings
+```
+
+-   `tests/basicos.rs`: mecánicas puntuales.
+-   `tests/mecanicas.rs`: escenarios de varios turnos sobre una sala controlada (`App::arena`), reproducibilidad de la semilla y una partida larga que verifica invariantes.
+-   `tests/pantallas.rs`: render de cada pantalla sobre el backend de prueba de `ratatui`, incluida una terminal de 40x15.
 
 ## 📚 Dependencias
 
