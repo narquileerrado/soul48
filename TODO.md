@@ -12,9 +12,9 @@
 - [x] **Habilidades Activas:** Embestida (pushback con tecla 'E') y Bloqueo activo / Parry (tecla 'B').
 
 ## 🗺️ 3. Variedad de Terreno y Generación Procedural
-- [ ] **Peligros Ambientales:** Trampas de pinchos, pozos de ácido, charcos de aceite e incendios.
-- [ ] **Salas Especiales:** Armerías, Bibliotecas mágicas y Salas de Círculos Rituales.
-- [ ] **Sistemas de Puertas:** Puertas de madera que bloquean visión, puertas cerradas con llave y pasajes secretos destructibles.
+- [x] **Peligros Ambientales:** Trampas de pinchos, pozos de ácido, charcos de aceite e incendios.
+- [x] **Salas Especiales:** Armerías, Bibliotecas mágicas y Salas de Círculos Rituales.
+- [x] **Sistemas de Puertas:** Puertas de madera que bloquean visión, puertas cerradas con llave y pasajes secretos destructibles.
 
 ## 🛡️ 4. Progresión del Personaje y Equipamiento
 - [ ] **Ranuras de Equipo Expandidas:** Armaduras, Cascos, Anillos y Amuletos mágicos.
