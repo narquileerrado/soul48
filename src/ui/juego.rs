@@ -57,15 +57,15 @@ pub fn ui(f: &mut Frame, app: &App) {
     historial(f, app, filas[2]);
 
     let teclas = if app.drop_mode {
-        barra_teclas(&[("1-9", "soltar"), ("D", "cancelar")])
+        barra_teclas(&[("1-9", "dexar"), ("D", "dexarlo estar")])
     } else {
         barra_teclas(&[
-            ("←↑→↓", "moverte"),
+            ("←↑→↓", "andar"),
             ("1-9", "usar"),
             ("E", "embestida"),
-            ("B", "bloqueo"),
-            ("D", "soltar"),
-            ("S", "bajar"),
+            ("B", "reparo"),
+            ("D", "dexar"),
+            ("S", "baxar"),
             ("Q", "silencio"),
         ])
     };
@@ -97,12 +97,12 @@ fn cinta(f: &mut Frame, app: &App, area: Rect) {
         ),
         Span::styled("  ·  ", Style::default().fg(theme::CENIZA_HONDA)),
         Span::styled(
-            format!("PISO {}", app.depth),
+            format!("SÓTANO {}", app.depth),
             Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
         ),
         Span::styled("  ·  ", Style::default().fg(theme::CENIZA_HONDA)),
         Span::styled(
-            format!("NIVEL {}", app.player.level),
+            format!("GRADO {}", app.player.level),
             Style::default().fg(theme::HUESO),
         ),
     ]);
@@ -119,7 +119,7 @@ fn cinta(f: &mut Frame, app: &App, area: Rect) {
     }
     if app.player.parry_active {
         estados.push(Span::styled(
-            "PARADA  ",
+            "REPARO  ",
             Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
         ));
     }
@@ -135,7 +135,7 @@ fn cinta(f: &mut Frame, app: &App, area: Rect) {
 
     f.render_widget(
         Paragraph::new(Line::from(Span::styled(
-            format!("SEMILLA {} ", app.seed),
+            format!("SIMIENTE {} ", app.seed),
             Style::default().fg(theme::CENIZA_HONDA),
         )))
         .alignment(Alignment::Right),
@@ -257,7 +257,7 @@ fn alma(f: &mut Frame, app: &App, area: Rect, glifos: Glifos) {
     let lineas = vec![
         fila_medidor(
             interior,
-            "ALMA",
+            "ÁNIMA",
             app.player.hp as f64 / app.player.max_hp.max(1) as f64,
             &v_alma,
             ancho_valor,
@@ -265,7 +265,7 @@ fn alma(f: &mut Frame, app: &App, area: Rect, glifos: Glifos) {
         ),
         fila_medidor(
             interior,
-            "CORDURA",
+            "SESO",
             app.player.sanity as f64 / app.player.max_sanity_total().max(1) as f64,
             &v_cor,
             ancho_valor,
@@ -287,7 +287,7 @@ fn alma(f: &mut Frame, app: &App, area: Rect, glifos: Glifos) {
                 pad_der(&app.player.stats.strength.to_string(), 4),
                 Style::default().fg(theme::HUESO),
             ),
-            Span::styled("AGI ", Style::default().fg(theme::CENIZA)),
+            Span::styled("MAÑ ", Style::default().fg(theme::CENIZA)),
             Span::styled(
                 pad_der(&app.player.stats.agility.to_string(), 4),
                 Style::default().fg(theme::HUESO),
@@ -304,7 +304,7 @@ fn alma(f: &mut Frame, app: &App, area: Rect, glifos: Glifos) {
         Paragraph::new(lineas).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(Span::styled(" TU ALMA ", titulo(false)))
+                .title(Span::styled(" VUESTRA ÁNIMA ", titulo(false)))
                 .border_style(marco(false)),
         ),
         area,
@@ -367,7 +367,7 @@ fn equipo(f: &mut Frame, app: &App, area: Rect) {
         Paragraph::new(lineas).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(Span::styled(" LO QUE LLEVÁS PUESTO ", titulo(false)))
+                .title(Span::styled(" LO QUE LLEVÁIS PUESTO ", titulo(false)))
                 .border_style(marco(false)),
         ),
         area,
@@ -410,7 +410,7 @@ fn cargas(f: &mut Frame, app: &App, area: Rect) {
 
     let libres = crate::balance::objetos::SLOTS_INVENTARIO.saturating_sub(app.inventory.len());
     if libres > 0 && app.inventory.len() < 6 {
-        let texto = format!("{} ranuras libres", libres);
+        let texto = format!("{} huecos vazíos", libres);
         let margen = interior.saturating_sub(texto.chars().count()) / 2;
         lineas.push(Line::from(""));
         lineas.push(Line::from(Span::styled(
@@ -421,14 +421,14 @@ fn cargas(f: &mut Frame, app: &App, area: Rect) {
 
     let (nombre, estilo_borde, estilo_titulo) = if app.drop_mode {
         (
-            " LO QUE SUELTAS ",
+            " LO QUE DEXÁIS ",
             Style::default().fg(theme::AMBAR),
             Style::default()
                 .fg(theme::AMBAR)
                 .add_modifier(Modifier::BOLD),
         )
     } else {
-        (" LO QUE CARGÁS ", marco(false), titulo(false))
+        (" LO QUE CARGÁIS ", marco(false), titulo(false))
     };
 
     f.render_widget(
@@ -455,7 +455,7 @@ fn rodea(f: &mut Frame, app: &App, area: Rect) {
 
     if cerca.is_empty() {
         lineas.push(Line::from(Span::styled(
-            " nada a la vista",
+            " nada se vee",
             Style::default().fg(theme::CENIZA_HONDA),
         )));
     }
@@ -501,7 +501,7 @@ fn rodea(f: &mut Frame, app: &App, area: Rect) {
         Paragraph::new(lineas).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(Span::styled(" LO QUE TE RODEA ", titulo(false)))
+                .title(Span::styled(" LO QUE OS RODEA ", titulo(false)))
                 .border_style(marco(false)),
         ),
         area,
@@ -534,7 +534,7 @@ fn historial(f: &mut Frame, app: &App, area: Rect) {
         Paragraph::new(lineas).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(Span::styled(" LO QUE SE DICE ", titulo(false)))
+                .title(Span::styled(" LO QUE SE DIZE ", titulo(false)))
                 .border_style(marco(false)),
         ),
         area,
@@ -549,11 +549,11 @@ fn modal_descenso(f: &mut Frame, app: &App, area: Rect) {
     let texto = vec![
         Line::from(""),
         Line::from(Span::styled(
-            format!("Descienden hacia el piso {}.", app.depth + 1),
+            format!("Baxáis al sótano {}.", app.depth + 1),
             Style::default().fg(theme::HUESO),
         )),
         Line::from(Span::styled(
-            "Lo que dejes aquí, aquí se queda.",
+            "Lo que aquí dexéis, aquí se queda.",
             Style::default()
                 .fg(theme::CENIZA)
                 .add_modifier(Modifier::ITALIC),
@@ -564,12 +564,12 @@ fn modal_descenso(f: &mut Frame, app: &App, area: Rect) {
                 "S",
                 Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" bajar        ", Style::default().fg(theme::CENIZA_HONDA)),
+            Span::styled(" baxar        ", Style::default().fg(theme::CENIZA_HONDA)),
             Span::styled(
                 "N",
                 Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" quedarte", Style::default().fg(theme::CENIZA_HONDA)),
+            Span::styled(" quedaros", Style::default().fg(theme::CENIZA_HONDA)),
         ]),
     ];
 
@@ -577,7 +577,7 @@ fn modal_descenso(f: &mut Frame, app: &App, area: Rect) {
         Paragraph::new(texto).alignment(Alignment::Center).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(Span::styled(" LAS ESCALERAS ", titulo(true)))
+                .title(Span::styled(" LA ESCALERA ", titulo(true)))
                 .title_alignment(Alignment::Center)
                 .border_style(marco(true)),
         ),

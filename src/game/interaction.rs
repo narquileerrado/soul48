@@ -40,11 +40,11 @@ impl App {
             } => {
                 if *pacified {
                     self.add_log(
-                        format!("> {} ignora tu presencia en paz.", entity_clone.name),
+                        format!("> {} os dexa passar en paz.", entity_clone.name),
                         LogType::Info,
                     );
                     move_allowed = false;
-                } else if entity_clone.name.contains("Ladrón")
+                } else if crate::bestiary::es_negociable(&entity_clone.name)
                     && *state != EnemyState::Aggressive
                     && self.player.sanity >= balance::cordura::MINIMA_PARA_NEGOCIAR
                 {
@@ -53,7 +53,7 @@ impl App {
                     self.player.sanity -= balance::cordura::COSTO_NEGOCIACION;
                     self.add_log(
                         format!(
-                            "> NEGOCIACIÓN: Calmas al {} entregando un fragmento de tu voz (-{} Cordura).",
+                            "> CONCIERTO: Aplacáis al {} dándole un pedaço de vuestra voz (-{} de seso).",
                             entity_clone.name,
                             balance::cordura::COSTO_NEGOCIACION
                         ),
@@ -69,10 +69,13 @@ impl App {
 
                     if self.rng.gen_bool(balance::combate::PROB_CRITICO) {
                         damage *= balance::combate::MULT_CRITICO;
-                        self.add_log(format!("> CRÍTICO: ¡{} daño!", damage), LogType::Combat);
+                        self.add_log(
+                            format!("> ¡GOLPE CERTERO: {} de daño!", damage),
+                            LogType::Combat,
+                        );
                     } else {
                         self.add_log(
-                            format!("> {} daño a {}.", damage, entity_clone.name),
+                            format!("> {} de daño a {}.", damage, entity_clone.name),
                             LogType::Combat,
                         );
                     }
@@ -90,7 +93,7 @@ impl App {
                     if let Some(k_idx) = self
                         .inventory
                         .iter()
-                        .position(|(i, _)| i.name == "Llave de Hierro")
+                        .position(|(i, _)| i.name == crate::bestiary::LLAVE)
                     {
                         if self.inventory[k_idx].1 > 1 {
                             self.inventory[k_idx].1 -= 1;
@@ -98,7 +101,7 @@ impl App {
                             self.inventory.remove(k_idx);
                         }
 
-                        self.add_log("> Abres el cofre con la llave.".into(), LogType::Info);
+                        self.add_log("> Abrís el cofre con la llave.".into(), LogType::Info);
                         let dmg_bonus = self.depth as i32;
 
                         self.entities[index] = Entity {
@@ -114,7 +117,7 @@ impl App {
                         };
                     } else {
                         self.add_log(
-                            "> El cofre está cerrado (Necesitas Llave).".into(),
+                            "> Cerrado está el cofre: menester es la llave.".into(),
                             LogType::Warning,
                         );
                     }
@@ -131,7 +134,7 @@ impl App {
                         LogType::Whisper,
                     );
                 } else {
-                    self.add_log("La pared guarda silencio ahora.".into(), LogType::Whisper);
+                    self.add_log("Calla ya la pared.".into(), LogType::Whisper);
                 }
             }
             EntityType::EchoAltar { used } => {
@@ -143,12 +146,12 @@ impl App {
                         self.entities[index] = entity_clone;
                         self.add_log(
                             format!(
-                                "> PACTO DE SANGRE: Ofreces {} HP al Altar de Ecos.",
+                                "> PACTO DE SANGRE: Ofrecéis {} de ánima al Altar de los Ecos.",
                                 balance::terreno::COSTO_ALTAR
                             ),
                             LogType::Warning,
                         );
-                        self.add_log("> EL PISO SE REVELA ANTE TI.".into(), LogType::Info);
+                        self.add_log("> DESCÚBRESE EL SÓTANO ANTE VOS.".into(), LogType::Info);
 
                         // Revela todo el mapa explorado
                         let (map_height, map_width) = self.dimensiones();
@@ -159,13 +162,13 @@ impl App {
                         }
                     } else {
                         self.add_log(
-                            "> Tu alma está demasiado débil para ofrecer sangre.".into(),
+                            "> Flaca anda vuestra ánima para ofrecer sangre.".into(),
                             LogType::Warning,
                         );
                     }
                 } else {
                     self.add_log(
-                        "> El Altar de Ecos ha consumido su tributo.".into(),
+                        "> Consumió ya el Altar de los Ecos su tributo.".into(),
                         LogType::Info,
                     );
                 }
@@ -182,7 +185,7 @@ impl App {
                     if let Some(k_idx) = self
                         .inventory
                         .iter()
-                        .position(|(i, _)| i.name == "Llave de Hierro")
+                        .position(|(i, _)| i.name == crate::bestiary::LLAVE)
                     {
                         if self.inventory[k_idx].1 > 1 {
                             self.inventory[k_idx].1 -= 1;
@@ -194,13 +197,13 @@ impl App {
                         entity_clone.glyph = '\'';
                         entity_clone.name = "Puerta Abierta".into();
                         self.add_log(
-                            "> Desbloqueas y abres la puerta con la llave.".into(),
+                            "> Franqueáis y abrís la puerta con la llave.".into(),
                             LogType::Info,
                         );
                         self.entities[index] = entity_clone;
                     } else {
                         self.add_log(
-                            "> La puerta está cerrada con llave.".into(),
+                            "> Cerrada está la puerta con llave.".into(),
                             LogType::Warning,
                         );
                     }
@@ -210,15 +213,15 @@ impl App {
                     *open = true;
                     entity_clone.glyph = '\'';
                     entity_clone.name = if is_sec {
-                        "Pasaje Secreto Revelado".into()
+                        "Passadizo Descubierto".into()
                     } else {
                         "Puerta Abierta".into()
                     };
                     self.add_log(
                         if is_sec {
-                            "> ¡Descubres un pasaje secreto!".into()
+                            "> ¡Descubrís un passadizo encubierto!".into()
                         } else {
-                            "> Abres la puerta.".into()
+                            "> Abrís la puerta.".into()
                         },
                         LogType::Info,
                     );
@@ -232,7 +235,7 @@ impl App {
                         self.player.hp = (self.player.hp - balance::terreno::PINCHOS).max(0);
                         self.add_log(
                             format!(
-                                "> TRAMPA DE PINCHOS: ¡Sufres {} de daño!",
+                                "> TRAMPA DE PÚAS: ¡Padecéis {} de daño!",
                                 balance::terreno::PINCHOS
                             ),
                             LogType::Warning,
@@ -247,7 +250,10 @@ impl App {
                             damage_per_turn: por_turno,
                         });
                         self.add_log(
-                            format!("> POZO DE ÁCIDO: ¡Sufres {} daño y te envenenas!", dano),
+                            format!(
+                                "> POÇO DE ÁCIDO: ¡Padecéis {} de daño y quedáis emponçoñado!",
+                                dano
+                            ),
                             LogType::Warning,
                         );
                     }
@@ -265,13 +271,17 @@ impl App {
                                 damage_per_turn: por_turno,
                             });
                             self.add_log(
-                                format!("> ¡EL ACEITE PRENDE! Sufres {} daño y te quemas.", dano),
+                                format!(
+                                    "> ¡PRENDE EL AZEITE! Padecéis {} de daño y os quemáis.",
+                                    dano
+                                ),
                                 LogType::Warning,
                             );
                         } else {
                             resbala = true;
                             self.add_log(
-                                "> CHARCO DE ACEITE: Resbalás y te llevás un paso de más.".into(),
+                                "> CHARCO DE AZEITE: Resbaláis, y os lleváis un passo de más."
+                                    .into(),
                                 LogType::Info,
                             );
                         }
@@ -285,7 +295,7 @@ impl App {
                             damage_per_turn: por_turno,
                         });
                         self.add_log(
-                            format!("> FUEGO: ¡Sufres {} daño y te quemas!", dano),
+                            format!("> FUEGO: ¡Padecéis {} de daño y os quemáis!", dano),
                             LogType::Warning,
                         );
                     }
@@ -296,17 +306,19 @@ impl App {
                 match room_type {
                     SpecialRoomType::Armory => {
                         self.add_log(
-                            "> ENTRANDO A LA ARMERÍA: El olor a metal templado llena el aire."
-                                .into(),
+                            "> LA ARMERÍA: Huele el aire a metal templado.".into(),
                             LogType::Info,
                         );
                     }
                     SpecialRoomType::Library => {
-                        self.add_log("> ENTRANDO A LA BIBLIOTECA: Pergaminos arcanos descansan en los estantes.".into(), LogType::Info);
+                        self.add_log(
+                            "> LA LIBRERÍA: Reposan pergaminos arcanos en los estantes.".into(),
+                            LogType::Info,
+                        );
                     }
                     SpecialRoomType::RitualCircle => {
                         self.add_log(
-                            "> CIRCULO RITUAL: Sientes un escalofrío de energía oscura.".into(),
+                            "> CÍRCULO RITUAL: Corre por vos un frío de fuerça escura.".into(),
                             LogType::Warning,
                         );
                     }
@@ -337,16 +349,16 @@ impl App {
                     self.inventory[idx].1 += 1;
                     let new_count = self.inventory[idx].1;
                     self.add_log(
-                        format!("> Recoges {} (x{}).", entity_clone.name, new_count),
+                        format!("> Tomáis {} (x{}).", entity_clone.name, new_count),
                         LogType::Item,
                     );
                     entity_index_to_remove = Some(index);
                 } else if self.inventory.len() < balance::objetos::SLOTS_INVENTARIO {
-                    self.add_log(format!("> Recoges {}.", entity_clone.name), LogType::Item);
+                    self.add_log(format!("> Tomáis {}.", entity_clone.name), LogType::Item);
                     self.inventory.push((entity_clone, 1));
                     entity_index_to_remove = Some(index);
                 } else {
-                    self.add_log("> Inventario lleno.".into(), LogType::Warning);
+                    self.add_log("> No cabe más en vuestras manos.".into(), LogType::Warning);
                     move_allowed = false;
                     // no pasó nada: cobrar un turno por eso regalaba
                     // movimientos gratis a los enemigos

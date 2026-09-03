@@ -39,12 +39,12 @@ fn la_pantalla_de_juego_muestra_sus_paneles() {
     for esperado in [
         "SOUL 48",
         "LAS CRIPTAS",
-        "TU ALMA",
-        "LO QUE LLEVÁS PUESTO",
-        "LO QUE CARGÁS",
-        "LO QUE TE RODEA",
-        "LO QUE SE DICE",
-        "moverte",
+        "VUESTRA ÁNIMA",
+        "LO QUE LLEVÁIS PUESTO",
+        "LO QUE CARGÁIS",
+        "LO QUE OS RODEA",
+        "LO QUE SE DIZE",
+        "andar",
     ] {
         assert!(
             pantalla.contains(esperado),
@@ -62,8 +62,8 @@ fn el_modo_soltar_se_anuncia_en_pantalla() {
     terminal.draw(|f| ui(f, &app)).unwrap();
 
     let pantalla = texto(&terminal);
-    assert!(pantalla.contains("LO QUE SUELTAS"));
-    assert!(pantalla.contains("cancelar"));
+    assert!(pantalla.contains("LO QUE DEXÁIS"));
+    assert!(pantalla.contains("dexarlo estar"));
 }
 
 #[test]
@@ -74,8 +74,8 @@ fn el_modal_de_descenso_se_dibuja_sobre_el_mapa() {
     terminal.draw(|f| ui(f, &app)).unwrap();
 
     let pantalla = texto(&terminal);
-    assert!(pantalla.contains("LAS ESCALERAS"), "no se ve el modal");
-    assert!(pantalla.contains("quedarte"));
+    assert!(pantalla.contains("LA ESCALERA"), "no se ve el modal");
+    assert!(pantalla.contains("quedaros"));
 }
 
 #[test]
@@ -134,11 +134,8 @@ fn el_compendio_muestra_la_criatura_elegida() {
 
     let pantalla = texto(&terminal);
     assert!(pantalla.contains("EL COMPENDIO DE LAS SOMBRAS"));
-    assert!(
-        pantalla.contains("SERPIENTE DE MÉDULA"),
-        "no se ve la ficha"
-    );
-    assert!(pantalla.contains("VITALIDAD"));
+    assert!(pantalla.contains("SIERPE DE MÉDULA"), "no se ve la ficha");
+    assert!(pantalla.contains("VIGOR"));
 }
 
 #[test]
@@ -151,9 +148,9 @@ fn los_ajustes_describen_la_fila_elegida() {
         .draw(|f| options_ui(f, &app.settings, &mut menus.opciones))
         .unwrap();
     let pantalla = texto(&terminal);
-    assert!(pantalla.contains("SINTONIZAR ALMA"));
+    assert!(pantalla.contains("TEMPLAR EL ÁNIMA"));
     assert!(pantalla.contains("LA PENUMBRA"));
-    assert!(pantalla.contains("QUÉ HACE"));
+    assert!(pantalla.contains("QUÉ HAZE"));
 }
 
 #[test]
@@ -186,8 +183,8 @@ fn la_pantalla_de_fin_dice_hasta_donde_llegaste() {
     terminal.draw(|f| game_over_ui(f, &app)).unwrap();
 
     let pantalla = texto(&terminal);
-    assert!(pantalla.contains("HAS CAÍDO"));
-    assert!(pantalla.contains("PISO ALCANZADO"));
+    assert!(pantalla.contains("HABÉIS CAÍDO"));
+    assert!(pantalla.contains("SÓTANO ALCANÇADO"));
 }
 
 /// Las criptas, con y sin fragmento guardado.
@@ -200,7 +197,7 @@ fn el_menu_principal_anuncia_el_ultimo_fragmento() {
     terminal
         .draw(|f| title::ui(f, &mut menus.titulo, &None, &app.settings, 0))
         .unwrap();
-    assert!(texto(&terminal).contains("sin partida guardada"));
+    assert!(texto(&terminal).contains("no hay jornada guardada"));
 
     terminal
         .draw(|f| {
@@ -215,10 +212,13 @@ fn el_menu_principal_anuncia_el_ultimo_fragmento() {
         .unwrap();
     let pantalla = texto(&terminal);
     assert!(
-        pantalla.contains("piso 7"),
-        "no se ve el piso del fragmento"
+        pantalla.contains("sótano 7"),
+        "no se ve el sótano del fragmento"
     );
-    assert!(pantalla.contains("12/40"), "no se ve el alma del fragmento");
+    assert!(
+        pantalla.contains("12/40"),
+        "no se ve el ánima del fragmento"
+    );
     assert!(
         pantalla.contains("4242"),
         "no se ve la semilla del fragmento"
@@ -234,11 +234,11 @@ fn el_menu_principal_empieza_por_lo_primero() {
     assert_eq!(
         etiquetas,
         vec![
-            "DESCENDER AL ABISMO",
-            "RECOGER FRAGMENTOS",
-            "COMPENDIO DE SOMBRAS",
-            "SINTONIZAR ALMA",
-            "VOLVER AL SILENCIO",
+            "BAXAR AL ABISMO",
+            "COBRAR LOS FRAGMENTOS",
+            "COMPENDIO DE LAS SOMBRAS",
+            "TEMPLAR EL ÁNIMA",
+            "TORNAR AL SILENCIO",
         ]
     );
 }
@@ -299,7 +299,7 @@ fn el_menu_principal_entra_en_una_terminal_baja() {
             .unwrap();
         let pantalla = texto(&terminal);
         assert!(
-            pantalla.contains("DESCENDER AL ABISMO"),
+            pantalla.contains("BAXAR AL ABISMO"),
             "a {}x{} se perdió la primera opción",
             ancho,
             alto
@@ -320,10 +320,10 @@ fn la_pantalla_de_victoria_celebra_el_final() {
 
     let pantalla = texto(&terminal);
     assert!(pantalla.contains("EL ORIGEN"));
-    assert!(pantalla.contains("HAS RECUPERADO TU VOZ"));
-    assert!(pantalla.contains("PISO ALCANZADO"));
+    assert!(pantalla.contains("HABÉIS COBRADO VUESTRA VOZ"));
+    assert!(pantalla.contains("SÓTANO ALCANÇADO"));
     assert!(
-        pantalla.contains("SEMILLA"),
+        pantalla.contains("SIMIENTE"),
         "falta la semilla de la corrida"
     );
 }
@@ -337,7 +337,7 @@ fn la_derrota_avisa_que_no_hay_vuelta() {
     app.state = GameState::GameOver;
     terminal.draw(|f| game_over_ui(f, &app)).unwrap();
 
-    assert!(texto(&terminal).contains("El fragmento se disuelve"));
+    assert!(texto(&terminal).contains("Deshácese el fragmento"));
 }
 
 /// Las dos pantallas de cierre también aguantan una terminal chica.
@@ -421,7 +421,7 @@ fn el_relato_pasa_rodando_bajo_el_titulo() {
     // el relato arranca por el principio
     let inicio = capturar(0);
     assert!(
-        inicio.contains("Despiertas en el umbral"),
+        inicio.contains("Despertáis en el umbral"),
         "la cinta no arranca por el comienzo del relato"
     );
 
@@ -433,7 +433,7 @@ fn el_relato_pasa_rodando_bajo_el_titulo() {
     for paso in [1usize, 50, 200, vuelta, vuelta * 3 + 7] {
         let pantalla = capturar(paso);
         assert!(
-            pantalla.contains("DESCENDER AL ABISMO"),
+            pantalla.contains("BAXAR AL ABISMO"),
             "a paso {} se rompió la pantalla",
             paso
         );

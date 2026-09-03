@@ -18,7 +18,7 @@ impl App {
             if dmg > 0 {
                 self.player.hp = (self.player.hp - dmg).max(0);
                 self.add_log(
-                    format!("> Sufres {} daño por efecto de estado.", dmg),
+                    format!("> Padecéis {} de daño del mal que lleváis.", dmg),
                     LogType::Warning,
                 );
             }
@@ -60,7 +60,7 @@ impl App {
         if self.player.invisible_turns > 0 {
             self.player.invisible_turns -= 1;
             if self.player.invisible_turns == 0 {
-                self.add_log("> La invisibilidad se disipa.".into(), LogType::Info);
+                self.add_log("> Deshácese la invisibilidad.".into(), LogType::Info);
             }
         }
 
@@ -70,7 +70,7 @@ impl App {
             self.player.sanity -= 1;
             if self.player.sanity == 0 {
                 self.add_log(
-                    "> TUS PENSAMIENTOS SE COLAPSAN EN EL SILENCIO.".into(),
+                    "> DERRÚMBANSE VUESTROS PENSAMIENTOS EN EL SILENCIO.".into(),
                     LogType::Warning,
                 );
             }
@@ -82,7 +82,7 @@ impl App {
             self.player.hp = (self.player.hp - 1).max(0);
             self.player.damage_flash_turns = 1;
             self.add_log(
-                "> El silencio devora un fragmento de tu alma.".into(),
+                "> Devora el silencio un pedaço de vuestra ánima.".into(),
                 LogType::Whisper,
             );
         }
@@ -124,7 +124,7 @@ impl App {
                 && dist < balance::percepcion::DISTANCIA_DESPERTAR
             {
                 current_state = EnemyState::Aggressive;
-                messages.push((format!("> {} despierta!", name), LogType::Warning));
+                messages.push((format!("> ¡{} despierta!", name), LogType::Warning));
             }
 
             match current_state {
@@ -145,7 +145,7 @@ impl App {
                     if adyacente {
                         if self.player.invisible_turns > 0 {
                             messages.push((
-                                format!("> {} no puede verte en las sombras.", name),
+                                format!("> {} no os alcança a ver en las sombras.", name),
                                 LogType::Info,
                             ));
                         } else if let EntityType::Mob {
@@ -160,7 +160,7 @@ impl App {
                             if esquiva > 0.0 && self.rng.gen_bool(esquiva) {
                                 dmg = 0;
                                 messages.push((
-                                    format!("> Esquivas el golpe de {}.", name),
+                                    format!("> Hurtáis el cuerpo al golpe de {}.", name),
                                     LogType::Info,
                                 ));
                             } else if self.player.parry_active {
@@ -169,14 +169,14 @@ impl App {
                                 self.player.parry_active = false;
                                 messages.push((
                                     format!(
-                                        "> ¡PARRY! Desvías el golpe de {} (recibes sólo {} daño)",
+                                        "> ¡REPARO! Desviáis el golpe de {} (no recebís sino {} de daño)",
                                         name, dmg
                                     ),
                                     LogType::Info,
                                 ));
                             } else {
                                 messages.push((
-                                    format!("> {} te golpea ({} daño)", name, dmg),
+                                    format!("> {} os hiere ({} de daño)", name, dmg),
                                     LogType::Warning,
                                 ));
                             }
@@ -204,7 +204,7 @@ impl App {
                                         .any(|e| e.effect_type == efecto)
                                     {
                                         messages.push((
-                                            format!("> {} te deja su marca.", name),
+                                            format!("> {} os dexa su señal.", name),
                                             LogType::Warning,
                                         ));
                                         self.player.status_effects.push(StatusEffect {

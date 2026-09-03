@@ -739,7 +739,7 @@ fn el_cobarde_se_aleja() {
     let mut app = App::arena(59);
     let al_lado = Point::new(app.player.pos.x + 1, app.player.pos.y);
     app.entities
-        .push(mob(al_lado, "Ladrón", 100, (1, 1), 0, EnemyAI::Coward));
+        .push(mob(al_lado, "Sombra", 100, (1, 1), 0, EnemyAI::Coward));
 
     for _ in 0..6 {
         app.process_enemy_turns();

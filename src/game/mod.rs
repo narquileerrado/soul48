@@ -264,7 +264,7 @@ impl App {
         let mut app = App {
             player,
             logs: VecDeque::from([LogMessage {
-                text: format!("> NIVEL {} - SEED: {}", depth, seed),
+                text: format!("> SÓTANO {} · SIMIENTE {}", depth, seed),
                 l_type: LogType::Info,
             }]),
             map,
@@ -281,7 +281,9 @@ impl App {
             show_descend_prompt: false,
 
             state: initial_state,
-            settings: Settings::load(crate::settings::RUTA_AJUSTES),
+            // los ajustes entran desde afuera: leer el disco acá hacía que los
+            // tests dependieran del settings.json de quien los corriera
+            settings: Settings::default(),
             rng,
         };
 
@@ -320,7 +322,7 @@ impl App {
         // `App::new` ya alisó los muros; sólo falta mirar desde la entrada
         abajo.calculate_fov();
         abajo.add_log(
-            format!("> HAS DESCENDIDO AL NIVEL {}", profundidad),
+            format!("> HABÉIS BAXADO AL SÓTANO {}", profundidad),
             LogType::Info,
         );
 
@@ -368,7 +370,7 @@ impl App {
         self.calculate_fov();
         self.state = GameState::Playing;
         self.add_log(
-            "> Un viaje traicionero comienza... PISO 1".into(),
+            "> Comiença jornada traidora... SÓTANO 1".into(),
             LogType::Info,
         );
     }
@@ -436,7 +438,10 @@ impl App {
 
     /// Añade experiencia al personaje y gestiona subidas de nivel.
     pub fn add_xp(&mut self, amount: u32) {
-        self.add_log(format!("> Ganas {} de experiencia.", amount), LogType::Info);
+        self.add_log(
+            format!("> Ganáis {} de experiencia.", amount),
+            LogType::Info,
+        );
         for aviso in self.player.ganar_xp(amount) {
             self.add_log(aviso, LogType::Info);
         }
@@ -474,9 +479,9 @@ impl App {
             return (dx, dy);
         }
         let motivo = if confundido {
-            "> La confusión te tuerce el paso."
+            "> La confusión os tuerce el passo."
         } else {
-            "> La penumbra te tuerce el paso."
+            "> La penumbra os tuerce el passo."
         };
         self.add_log(motivo.into(), LogType::Whisper);
         elegido
@@ -508,11 +513,11 @@ impl App {
 
         if self.visible[mouse_pos.y][mouse_pos.x] {
             if let Some(e) = self.entities.iter().find(|e| e.pos == mouse_pos) {
-                self.add_log(format!("> INFO: {}", e.name), LogType::Info);
+                self.add_log(format!("> SEÑAS: {}", e.name), LogType::Info);
             } else if self.tile(mouse_pos) == Some('>') {
-                self.add_log("> INFO: Escaleras hacia abajo.".into(), LogType::Info);
+                self.add_log("> SEÑAS: Escalera que baxa.".into(), LogType::Info);
             } else {
-                self.add_log("> INFO: Terreno despejado.".into(), LogType::Info);
+                self.add_log("> SEÑAS: Suelo desembaraçado.".into(), LogType::Info);
             }
         }
     }

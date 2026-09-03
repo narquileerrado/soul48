@@ -8,7 +8,7 @@ use soul48::app::{App, GameState, LogType};
 use soul48::bestiary;
 use soul48::input::{self, AccionAjustes, AccionDescenso, AccionFin, AccionJuego, AccionMenu};
 use soul48::menus::Menus;
-use soul48::settings::{AJUSTES, RUTA_AJUSTES};
+use soul48::settings::{Settings, AJUSTES, RUTA_AJUSTES};
 use soul48::title::{self, MainMenuOption};
 use soul48::ui::{bestiary_ui, game_over_ui, options_ui, ui, victory_ui};
 
@@ -63,6 +63,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 /// acá no deje la consola en modo raw.
 fn correr<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>> {
     let mut app = App::new(None, None, None, 1, None);
+    // los ajustes son del jugador, no del estado del juego: se leen acá
+    app.settings = Settings::load(RUTA_AJUSTES);
     let mut menus = Menus::default();
     // qué te espera si elegís RECOGER FRAGMENTOS
     let mut fragmento = App::peek_save(RUTA_PARTIDA);
@@ -159,9 +161,14 @@ fn pantalla_titulo(
                 MainMenuOption::StartGame => app.start_new_game(),
                 MainMenuOption::Bestiary => app.state = GameState::Bestiary,
                 MainMenuOption::LoadGame => match App::load_from_file(RUTA_PARTIDA) {
-                    Ok(cargada) => *app = cargada,
+                    Ok(cargada) => {
+                        // la jornada cambia; los ajustes son de quien juega
+                        let ajustes = app.settings.clone();
+                        *app = cargada;
+                        app.settings = ajustes;
+                    }
                     Err(e) => app.add_log(
-                        format!("> No se pudo recoger el fragmento: {}", e),
+                        format!("> No se pudo cobrar el fragmento: {}", e),
                         LogType::Warning,
                     ),
                 },
@@ -221,14 +228,17 @@ fn pantalla_juego(app: &mut App, code: KeyCode) -> bool {
                 // sin esto se guardaba sólo al salir con Q.
                 if let Err(e) = app.save_to_file(RUTA_PARTIDA) {
                     app.add_log(
-                        format!("> El fragmento no pudo asentarse: {}", e),
+                        format!("> No pudo asentarse el fragmento: {}", e),
                         LogType::Warning,
                     );
                 }
             }
             Some(AccionDescenso::Quedarse) => {
                 app.confirm_descent();
-                app.add_log("> Decides quedarte en este nivel.".into(), LogType::Info);
+                app.add_log(
+                    "> Determináis quedaros en aqueste sótano.".into(),
+                    LogType::Info,
+                );
             }
             None => {}
         }
@@ -243,9 +253,9 @@ fn pantalla_juego(app: &mut App, code: KeyCode) -> bool {
         Some(AccionJuego::ModoSoltar) => {
             app.drop_mode = !app.drop_mode;
             let aviso = if app.drop_mode {
-                "> [DESCARTAR] Pulsa 1-9 (o 'd' para cancelar)."
+                "> [DEXAR] Pulsad 1-9 (o «d» para dexarlo estar)."
             } else {
-                "> Modo descartar cancelado."
+                "> Dexado está el modo de dexar."
             };
             app.add_log(aviso.into(), LogType::Warning);
         }
@@ -269,7 +279,7 @@ fn pantalla_juego(app: &mut App, code: KeyCode) -> bool {
     if hubo_accion {
         if app.drop_mode {
             app.drop_mode = false;
-            app.add_log("> Modo descartar cancelado.".into(), LogType::Info);
+            app.add_log("> Dexado está el modo de dexar.".into(), LogType::Info);
         }
         if !app.show_descend_prompt {
             app.process_enemy_turns();

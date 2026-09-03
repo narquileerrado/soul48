@@ -2,6 +2,17 @@
 //! `app.rs`. Los escenarios de varios turnos están en `mecanicas.rs`.
 
 use ratatui::style::Color;
+
+/// El nombre de la criatura que se puede calmar en vez de pelear. Sale del
+/// catálogo para que renombrarla no rompa el test en silencio.
+fn negociable() -> String {
+    soul48::bestiary::BESTIARIO
+        .iter()
+        .find(|e| e.negociable)
+        .expect("ninguna criatura es negociable")
+        .short_name
+        .to_string()
+}
 use soul48::app::*;
 
 #[test]
@@ -61,7 +72,7 @@ fn test_use_item_healing_potion() {
         pos: Point::new(0, 0),
         glyph: '!',
         color: soul48::theme::HUESO,
-        name: "Poción de Curación".to_string(),
+        name: soul48::bestiary::POCION.to_string(),
         e_type: EntityType::Item,
         status_effects: Vec::new(),
     };
@@ -80,7 +91,7 @@ fn test_drop_item() {
         pos: Point::new(0, 0),
         glyph: '!',
         color: soul48::theme::HUESO,
-        name: "Poción de Curación".to_string(),
+        name: soul48::bestiary::POCION.to_string(),
         e_type: EntityType::Item,
         status_effects: Vec::new(),
     };
@@ -152,7 +163,7 @@ fn test_spirit_negotiation() {
         pos: thief_pos,
         glyph: 'L',
         color: Color::Blue,
-        name: "Ladrón".to_string(),
+        name: negociable(),
         e_type: EntityType::Mob {
             hp: 18,
             max_hp: 18,
@@ -514,4 +525,20 @@ fn los_retratos_son_rectangulares() {
             anchos
         );
     }
+}
+
+/// Una partida recién hecha no puede depender del `settings.json` de nadie.
+///
+/// `App::new` leía los ajustes del disco, con que los tests pasaban o fallaban
+/// según lo que tuviera configurado quien los corriera: un `settings.json` con
+/// GLIFOS en ascii hacía fallar el render del título sin que nada lo explicara.
+#[test]
+fn una_partida_nueva_no_lee_los_ajustes_del_disco() {
+    use soul48::settings::{Glifos, Settings};
+
+    let app = App::new(Some(1), None, None, 1, None);
+    let por_defecto = Settings::default();
+    assert_eq!(app.settings.glifos, Glifos::Unicode);
+    assert_eq!(app.settings.penumbra, por_defecto.penumbra);
+    assert_eq!(app.settings.lineas_susurro, por_defecto.lineas_susurro);
 }

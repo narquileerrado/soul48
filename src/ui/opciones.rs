@@ -23,7 +23,7 @@ pub fn options_ui(f: &mut Frame, ajustes: &Settings, estado: &mut ListState) {
             .borders(Borders::ALL)
             .border_type(BorderType::Double)
             .border_style(marco(true))
-            .title(Span::styled(" SINTONIZAR ALMA ", titulo(true)))
+            .title(Span::styled(" TEMPLAR EL ÁNIMA ", titulo(true)))
             .title_alignment(Alignment::Center),
         size,
     );
@@ -45,7 +45,7 @@ pub fn options_ui(f: &mut Frame, ajustes: &Settings, estado: &mut ListState) {
 
     let bloque = Block::default()
         .borders(Borders::ALL)
-        .title(Span::styled(" AJUSTES ", titulo(false)))
+        .title(Span::styled(" LOS AJUSTES ", titulo(false)))
         .border_style(marco(false));
     let interior = bloque.inner(columnas[0]);
     f.render_widget(bloque, columnas[0]);
@@ -125,17 +125,17 @@ pub fn options_ui(f: &mut Frame, ajustes: &Settings, estado: &mut ListState) {
             Block::default()
                 .borders(Borders::ALL)
                 .padding(Padding::horizontal(1))
-                .title(Span::styled(" QUÉ HACE ", titulo(false)))
+                .title(Span::styled(" QUÉ HAZE ", titulo(false)))
                 .border_style(marco(false)),
         ),
         columnas[2],
     );
 
     let pares = [
-        ("↑↓", "elegir"),
-        ("←→", "ajustar"),
+        ("↑↓", "escoger"),
+        ("←→", "templar"),
         ("ENTER", "confirmar"),
-        ("ESC", "volver"),
+        ("ESC", "tornar"),
     ];
     let x = (size.width as usize).saturating_sub(ancho_teclas(&pares)) / 2;
     let mut linea = barra_teclas(&pares);

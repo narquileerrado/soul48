@@ -19,7 +19,7 @@ use ratatui::{
 /// El relato del difunto. Ya no cabe como bloque en la pantalla nueva, así que
 /// pasa rodando bajo el título: se lee entero si te quedás, y no le quita lugar
 /// al menú si no.
-pub const STORY_SUMMARY: &str = "Despiertas en el umbral, sin voz. No eres más que un eco de quien fuiste, un alma atada a un cuerpo que ya no respira. Cuarenta y ocho pisos más abajo, el Archidemonio del Silencio guarda lo que te arrebató y se burla de que no puedas nombrarlo. Para recuperar tu voz y tu destino, hay que bajar hasta él. Pero ten cuidado: en este dominio, hasta las paredes tienen algo que decir, y la muerte es solo el comienzo de una nueva conversación.";
+pub const STORY_SUMMARY: &str = "Despertáis en el umbral, y no halláis voz con que quexaros. No sois ya sino eco de aquel que fuistes, ánima atada a cuerpo que ha dexado de respirar. Quarenta y ocho sótanos más abaxo aguarda el Archidemonio del Silencio, que guarda lo que os quitó y se ríe de que no podáis nombrarlo. Para cobrar vuestra voz y vuestra ventura, menester es baxar hasta él. Mas tened aviso: en aqueste dominio hasta las paredes tienen algo que dezir, y la muerte no es sino el comienço de otra plática.";
 
 /// Ancho de la cinta del relato, en celdas.
 const ANCHO_CINTA: usize = 56;
@@ -55,20 +55,22 @@ impl MainMenuOption {
     }
     pub fn as_str(&self) -> &str {
         match self {
-            MainMenuOption::StartGame => "DESCENDER AL ABISMO",
-            MainMenuOption::Bestiary => "COMPENDIO DE SOMBRAS",
-            MainMenuOption::LoadGame => "RECOGER FRAGMENTOS",
-            MainMenuOption::Options => "SINTONIZAR ALMA",
-            MainMenuOption::Quit => "VOLVER AL SILENCIO",
+            MainMenuOption::StartGame => "BAXAR AL ABISMO",
+            MainMenuOption::Bestiary => "COMPENDIO DE LAS SOMBRAS",
+            MainMenuOption::LoadGame => "COBRAR LOS FRAGMENTOS",
+            MainMenuOption::Options => "TEMPLAR EL ÁNIMA",
+            MainMenuOption::Quit => "TORNAR AL SILENCIO",
         }
     }
     pub fn description(&self) -> &str {
         match self {
-            MainMenuOption::StartGame => "Bajá desde el umbral hasta el piso 48. Recuperá tu voz.",
-            MainMenuOption::Bestiary => "Estudia a los moradores de las profundidades.",
-            MainMenuOption::LoadGame => "Continúa una partida guardada anteriormente.",
-            MainMenuOption::Options => "Sintoniza la penumbra, los glifos y el guardado.",
-            MainMenuOption::Quit => "Abandona el juego y regresa al sistema.",
+            MainMenuOption::StartGame => {
+                "Baxad desde el umbral hasta el sótano quarenta y ocho, y cobrad vuestra voz."
+            }
+            MainMenuOption::Bestiary => "Estudiad los moradores de las profundidades.",
+            MainMenuOption::LoadGame => "Proseguid la jornada que quedó a medias.",
+            MainMenuOption::Options => "Templad la penumbra, los glifos y el guardado.",
+            MainMenuOption::Quit => "Dexad el juego y tornad al sistema.",
         }
     }
 }
@@ -251,10 +253,10 @@ pub fn ui(
 
     lineas.push(match fragmento {
         Some((piso, hp, max_hp, seed)) => tenue(format!(
-            "piso {}   ·   alma {}/{}   ·   semilla {}",
+            "sótano {}   ·   ánima {}/{}   ·   simiente {}",
             piso, hp, max_hp, seed
         )),
-        None => tenue("sin partida guardada".into()),
+        None => tenue("no hay jornada guardada".into()),
     });
 
     lineas.extend(aire(if holgado { 2 } else { 1 }));
@@ -263,7 +265,10 @@ pub fn ui(
     } else {
         ("↑↓", "⏎")
     };
-    lineas.push(tenue(format!("{}        {}        esc", flechas, enter)));
+    lineas.push(tenue(format!(
+        "{}  andar        {}  escoger        esc  salir",
+        flechas, enter
+    )));
 
     // centrado vertical: lo que sobra se reparte arriba y abajo
     let alto = lineas.len() as u16;

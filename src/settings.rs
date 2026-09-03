@@ -41,8 +41,8 @@ pub const AJUSTES: [&str; 5] = [
     "LA PENUMBRA",
     "LÍNEAS DEL SUSURRO",
     "GLIFOS",
-    "GUARDADO",
-    "RESTABLECER",
+    "EL GUARDADO",
+    "TORNAR AL PRINCIPIO",
 ];
 
 impl Settings {
@@ -70,9 +70,9 @@ impl Settings {
             },
             3 => {
                 if self.guardado_automatico {
-                    "automático".into()
+                    "de suyo".into()
                 } else {
-                    "manual".into()
+                    "a mano".into()
                 }
             }
             _ => String::new(),
@@ -90,11 +90,11 @@ impl Settings {
 
     pub fn descripcion(idx: usize) -> &'static str {
         match idx {
-            0 => "Qué tan tenue queda lo que ya caminaste. Al mínimo, el mapa recordado casi desaparece y avanzás a ciegas; al máximo, el piso entero queda legible y se pierde la sensación de estar a oscuras.",
-            1 => "Cuántas voces quedan a la vista en el historial. Más líneas dejan seguir una conversación larga con una pared; menos líneas dejan más aire al resto de la pantalla.",
-            2 => "Los muros pueden dibujarse con caracteres de caja o en ASCII plano. Si tu terminal o tu fuente no tienen los glifos de caja, elegí ascii y todo vuelve a ser # y punto.",
-            3 => "Si está en automático, la partida se guarda sola al salir. En manual salís sin dejar rastro y el fragmento anterior queda intacto.",
-            _ => "Vuelve todo al principio: penumbra al 30, cinco líneas de susurro, glifos unicode y guardado automático.",
+            0 => "Quán tenue queda lo que ya anduvistes. En lo mínimo, el mapa recordado casi desaparece y camináis a ciegas; en lo máximo, el sótano entero queda legible y piérdese la sensación de andar a escuras.",
+            1 => "Quántas voces quedan a la vista. Más renglones dexan seguir una plática larga con una pared; menos renglones dan más aire a lo demás.",
+            2 => "Puédense dibuxar los muros con caracteres de caxa o en ASCII llano. Si vuestra terminal o vuestra letra careciere de los glifos de caxa, escoged ascii y tórnase todo a # y punto.",
+            3 => "Si está de suyo, guárdase la jornada sola al salir. A mano salís sin dexar rastro, y el fragmento anterior queda entero.",
+            _ => "Torna todo al principio: penumbra en treinta, cinco renglones de susurro, glifos unicode y guardado de suyo.",
         }
     }
 
