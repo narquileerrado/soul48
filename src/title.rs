@@ -16,6 +16,17 @@ use ratatui::{
     Frame,
 };
 
+/// El relato del difunto. Ya no cabe como bloque en la pantalla nueva, así que
+/// pasa rodando bajo el título: se lee entero si te quedás, y no le quita lugar
+/// al menú si no.
+pub const STORY_SUMMARY: &str = "Despertáis en el umbral, y no halláis voz con que quexaros. No sois ya sino eco de aquel que fuistes, ánima atada a cuerpo que ha dexado de respirar. Quarenta y ocho sótanos más abaxo aguarda el Archidemonio del Silencio, que guarda lo que os quitó y se ríe de que no podáis nombrarlo. Para cobrar vuestra voz y vuestra ventura, menester es baxar hasta él. Mas tened aviso: en aqueste dominio hasta las paredes tienen algo que dezir, y la muerte no es sino el comienço de otra plática.";
+
+/// Ancho de la cinta del relato, en celdas.
+const ANCHO_CINTA: usize = 56;
+/// Aire entre el final del relato y su propio comienzo, para que el bucle no
+/// se lea como un corte. Con esto y el largo del relato sale el ciclo entero.
+pub const PAUSA_CINTA: usize = 14;
+
 /// Datos mínimos de la partida guardada: piso, alma, alma máxima y semilla.
 pub type Fragmento = Option<(u32, i32, i32, u64)>;
 
@@ -44,20 +55,22 @@ impl MainMenuOption {
     }
     pub fn as_str(&self) -> &str {
         match self {
-            MainMenuOption::StartGame => "DESCENDER AL ABISMO",
-            MainMenuOption::Bestiary => "COMPENDIO DE SOMBRAS",
-            MainMenuOption::LoadGame => "RECOGER FRAGMENTOS",
-            MainMenuOption::Options => "SINTONIZAR ALMA",
-            MainMenuOption::Quit => "VOLVER AL SILENCIO",
+            MainMenuOption::StartGame => "BAXAR AL ABISMO",
+            MainMenuOption::Bestiary => "COMPENDIO DE LAS SOMBRAS",
+            MainMenuOption::LoadGame => "COBRAR LOS FRAGMENTOS",
+            MainMenuOption::Options => "TEMPLAR EL ÁNIMA",
+            MainMenuOption::Quit => "TORNAR AL SILENCIO",
         }
     }
     pub fn description(&self) -> &str {
         match self {
-            MainMenuOption::StartGame => "Bajá desde el umbral hasta el piso 48. Recuperá tu voz.",
-            MainMenuOption::Bestiary => "Estudia a los moradores de las profundidades.",
-            MainMenuOption::LoadGame => "Continúa una partida guardada anteriormente.",
-            MainMenuOption::Options => "Sintoniza la penumbra, los glifos y el guardado.",
-            MainMenuOption::Quit => "Abandona el juego y regresa al sistema.",
+            MainMenuOption::StartGame => {
+                "Baxad desde el umbral hasta el sótano quarenta y ocho, y cobrad vuestra voz."
+            }
+            MainMenuOption::Bestiary => "Estudiad los moradores de las profundidades.",
+            MainMenuOption::LoadGame => "Proseguid la jornada que quedó a medias.",
+            MainMenuOption::Options => "Templad la penumbra, los glifos y el guardado.",
+            MainMenuOption::Quit => "Dexad el juego y tornad al sistema.",
         }
     }
 }
@@ -180,9 +193,30 @@ fn aire(n: usize) -> Vec<Line<'static>> {
     vec![Line::from(""); n]
 }
 
+/// La ventana del relato que toca mostrar, corrida `desplazamiento` caracteres.
+///
+/// La cinta es circular: al llegar al final vuelve a empezar, con una pausa en
+/// blanco en el medio. El ancho es fijo para que la línea no baile de tamaño y
+/// el centrado la deje siempre en el mismo lugar.
+fn cinta_del_relato(ancho: usize, desplazamiento: usize) -> String {
+    let cinta: Vec<char> = STORY_SUMMARY
+        .chars()
+        .chain(std::iter::repeat_n(' ', PAUSA_CINTA))
+        .collect();
+    (0..ancho)
+        .map(|i| cinta[(desplazamiento + i) % cinta.len()])
+        .collect()
+}
+
 /* ─────────────────────────── la pantalla ─────────────────────────── */
 
-pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajustes: &Settings) {
+pub fn ui(
+    f: &mut Frame,
+    menu_state: &mut ListState,
+    fragmento: &Fragmento,
+    ajustes: &Settings,
+    desplazamiento: usize,
+) {
     let size = f.size();
     let seleccionado = menu_state.selected().unwrap_or(0);
     let ascii = ajustes.glifos == Glifos::Ascii;
@@ -196,6 +230,8 @@ pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajus
     lineas.extend(titulo_en_bloques(ascii));
     lineas.extend(aire(1));
     lineas.push(tenue(espaciado("the talking dead")));
+    let ancho_cinta = ANCHO_CINTA.min((size.width as usize).saturating_sub(4));
+    lineas.push(tenue(cinta_del_relato(ancho_cinta, desplazamiento)));
     lineas.extend(aire(respiro));
 
     for (i, opcion) in MainMenuOption::all().iter().enumerate() {
@@ -217,10 +253,10 @@ pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajus
 
     lineas.push(match fragmento {
         Some((piso, hp, max_hp, seed)) => tenue(format!(
-            "piso {}   ·   alma {}/{}   ·   semilla {}",
+            "sótano {}   ·   ánima {}/{}   ·   simiente {}",
             piso, hp, max_hp, seed
         )),
-        None => tenue("sin partida guardada".into()),
+        None => tenue("no hay jornada guardada".into()),
     });
 
     lineas.extend(aire(if holgado { 2 } else { 1 }));
@@ -229,7 +265,10 @@ pub fn ui(f: &mut Frame, menu_state: &mut ListState, fragmento: &Fragmento, ajus
     } else {
         ("↑↓", "⏎")
     };
-    lineas.push(tenue(format!("{}        {}        esc", flechas, enter)));
+    lineas.push(tenue(format!(
+        "{}  andar        {}  escoger        esc  salir",
+        flechas, enter
+    )));
 
     // centrado vertical: lo que sobra se reparte arriba y abajo
     let alto = lineas.len() as u16;

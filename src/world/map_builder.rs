@@ -117,7 +117,7 @@ impl MapBuilder {
                             pos: item_pos,
                             glyph: '!',
                             color: crate::theme::HUESO,
-                            name: "Poción de Curación".to_string(),
+                            name: bestiary::POCION.to_string(),
                             e_type: EntityType::Item,
                             status_effects: Vec::new(),
                         });
@@ -144,7 +144,7 @@ impl MapBuilder {
                                 pos: eq_pos,
                                 glyph: '^',
                                 color: crate::theme::HUESO,
-                                name: "Yelmo de Hierro".into(),
+                                name: "Almete de Fierro".into(),
                                 e_type: EntityType::Helmet {
                                     defense: 2 + depth as i32,
                                 },
@@ -154,7 +154,7 @@ impl MapBuilder {
                                 pos: eq_pos,
                                 glyph: '=',
                                 color: crate::theme::HUESO,
-                                name: "Anillo de Fuerza".into(),
+                                name: "Sortija de Fuerça".into(),
                                 e_type: EntityType::Ring { stat_bonus: 2 },
                                 status_effects: Vec::new(),
                             },
@@ -162,7 +162,7 @@ impl MapBuilder {
                                 pos: eq_pos,
                                 glyph: '"',
                                 color: crate::theme::VIOLETA,
-                                name: "Amuleto de Claridad".into(),
+                                name: "Nómina de Claridad".into(),
                                 e_type: EntityType::Amulet { sanity_bonus: 20 },
                                 status_effects: Vec::new(),
                             },
@@ -179,10 +179,10 @@ impl MapBuilder {
                             scroll_pos.y += 1;
                         }
                         let (s_type, s_name) = match rng.gen_range(0..4) {
-                            0 => (ScrollType::Lightning, "Pergamino de Rayo"),
-                            1 => (ScrollType::Fireball, "Pergamino de Bola de Fuego"),
-                            2 => (ScrollType::Teleport, "Pergamino de Teletransporte"),
-                            _ => (ScrollType::Invisibility, "Pergamino de Invisibilidad"),
+                            0 => (ScrollType::Lightning, "Pergamino del Rayo"),
+                            1 => (ScrollType::Fireball, "Pergamino de la Bola de Fuego"),
+                            2 => (ScrollType::Teleport, "Pergamino del Traslado"),
+                            _ => (ScrollType::Invisibility, "Pergamino de la Invisibilidad"),
                         };
                         entities.push(Entity {
                             pos: scroll_pos,
@@ -272,7 +272,7 @@ impl MapBuilder {
                 pos: key_pos,
                 glyph: 'k',
                 color: crate::theme::HUESO,
-                name: "Llave de Hierro".into(),
+                name: bestiary::LLAVE.into(),
                 e_type: EntityType::Key,
                 status_effects: Vec::new(),
             });
@@ -319,14 +319,14 @@ impl MapBuilder {
                             HazardType::Spikes,
                             '^',
                             crate::theme::AMBAR,
-                            "Trampa de Pinchos",
+                            "Trampa de Púas",
                         ),
-                        1 => (HazardType::Acid, '~', crate::theme::AMBAR, "Pozo de Ácido"),
+                        1 => (HazardType::Acid, '~', crate::theme::AMBAR, "Poço de Ácido"),
                         2 => (
                             HazardType::Oil,
                             'o',
                             crate::theme::AMBAR,
-                            "Charco de Aceite",
+                            "Charco de Azeite",
                         ),
                         _ => (HazardType::Fire, '&', crate::theme::AMBAR, "Fuego"),
                     };
@@ -363,7 +363,7 @@ impl MapBuilder {
                 pos: marker_pos,
                 glyph: 'R',
                 color: crate::theme::ORO,
-                name: "Marca de Sala Especial".into(),
+                name: "Señal de Aposento Señalado".into(),
                 e_type: EntityType::SpecialRoomMarker { room_type },
                 status_effects: Vec::new(),
             });
@@ -407,7 +407,7 @@ impl MapBuilder {
                 pos: altar_pos,
                 glyph: 'A',
                 color: crate::theme::ROJO_ALTAR,
-                name: "Altar de Ecos".into(),
+                name: "Altar de los Ecos".into(),
                 e_type: EntityType::EchoAltar { used: false },
                 status_effects: Vec::new(),
             });
@@ -499,7 +499,7 @@ impl MapBuilder {
                     pos: Point::new(0, 0),
                     glyph: '[',
                     color: crate::theme::HUESO,
-                    name: "Coraza de la Armería".into(),
+                    name: "Coraça de la Armería".into(),
                     e_type: EntityType::Armor { defense: 4 + bonus },
                     status_effects: Vec::new(),
                 },
@@ -508,10 +508,10 @@ impl MapBuilder {
             SpecialRoomType::Library => (0..3)
                 .map(|_| {
                     let (tipo, nombre) = match rng.gen_range(0..4) {
-                        0 => (ScrollType::Lightning, "Pergamino de Rayo"),
-                        1 => (ScrollType::Fireball, "Pergamino de Bola de Fuego"),
-                        2 => (ScrollType::Teleport, "Pergamino de Teletransporte"),
-                        _ => (ScrollType::Invisibility, "Pergamino de Invisibilidad"),
+                        0 => (ScrollType::Lightning, "Pergamino del Rayo"),
+                        1 => (ScrollType::Fireball, "Pergamino de la Bola de Fuego"),
+                        2 => (ScrollType::Teleport, "Pergamino del Traslado"),
+                        _ => (ScrollType::Invisibility, "Pergamino de la Invisibilidad"),
                     };
                     Entity {
                         pos: Point::new(0, 0),
@@ -529,7 +529,7 @@ impl MapBuilder {
                     pos: Point::new(0, 0),
                     glyph: '"',
                     color: crate::theme::VIOLETA,
-                    name: "Amuleto del Círculo".into(),
+                    name: "Nómina del Círculo".into(),
                     e_type: EntityType::Amulet { sanity_bonus: 40 },
                     status_effects: Vec::new(),
                 },

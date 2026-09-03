@@ -20,7 +20,7 @@ impl App {
                             self.entities[idx].pos = p_pos;
                             self.add_log(
                                 format!(
-                                    "> EMBESTIDA: Empujas a {} hacia atrás.",
+                                    "> EMBESTIDA: Apartáis a {} de un empellón.",
                                     self.entities[idx].name
                                 ),
                                 LogType::Combat,
@@ -30,7 +30,7 @@ impl App {
                     }
                     self.add_log(
                         format!(
-                            "> EMBESTIDA: Impactas a {} contra la pared.",
+                            "> EMBESTIDA: Dais con {} en la pared.",
                             self.entities[idx].name
                         ),
                         LogType::Combat,
@@ -44,7 +44,7 @@ impl App {
             }
         }
         self.add_log(
-            "> No hay enemigos adyacentes para embestir.".into(),
+            "> No hay a quién embestir aquí junto.".into(),
             LogType::Warning,
         );
         false
@@ -54,7 +54,7 @@ impl App {
     pub fn use_parry(&mut self) -> bool {
         self.player.parry_active = true;
         self.add_log(
-            "> BLOQUEO ACTIVO: Te preparas para desviar el próximo impacto.".into(),
+            "> REPARO: Aparejáos a desviar el golpe que viniere.".into(),
             LogType::Info,
         );
         true
@@ -83,14 +83,14 @@ impl App {
             .retain(|e| !matches!(e.e_type, EntityType::Mob { hp, .. } if hp <= 0));
 
         for nombre in caidos {
-            self.add_log(format!("> {} eliminada.", nombre), LogType::Combat);
+            self.add_log(format!("> {} quedó por muerta.", nombre), LogType::Combat);
             self.add_xp(crate::bestiary::xp_de(&nombre));
 
             // Es el único lugar donde muere algo, así que es acá donde se
             // entera el juego de que la corrida terminó bien.
             if nombre == crate::bestiary::ARCHIDEMONIO {
                 self.add_log(
-                    "> EL SILENCIO SE QUIEBRA. Tu voz vuelve a ser tuya.".into(),
+                    "> QUIÉBRASE EL SILENCIO. Vuestra voz torna a ser vuestra.".into(),
                     LogType::Whisper,
                 );
                 self.state = GameState::Victory;

@@ -88,11 +88,11 @@ fn cierre(
 fn marcador(app: &App) -> Line<'static> {
     let dato = Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD);
     Line::from(vec![
-        Span::styled("PISO ALCANZADO  ", Style::default().fg(theme::CENIZA)),
+        Span::styled("SÓTANO ALCANÇADO  ", Style::default().fg(theme::CENIZA)),
         Span::styled(format!("{}", app.depth), dato),
-        Span::styled("     NIVEL  ", Style::default().fg(theme::CENIZA)),
+        Span::styled("     GRADO  ", Style::default().fg(theme::CENIZA)),
         Span::styled(format!("{}", app.player.level), dato),
-        Span::styled("     SEMILLA  ", Style::default().fg(theme::CENIZA)),
+        Span::styled("     SIMIENTE  ", Style::default().fg(theme::CENIZA)),
         Span::styled(
             format!("{}", app.seed),
             Style::default().fg(theme::CENIZA_HONDA),
@@ -118,17 +118,20 @@ pub fn game_over_ui(f: &mut Frame, app: &App) {
     let texto = vec![
         Line::from(""),
         Line::from(Span::styled(
-            "HAS CAÍDO",
+            "HABÉIS CAÍDO",
             Style::default()
                 .fg(theme::ROJO_ALTAR)
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
-        Line::from(Span::styled("El abismo ha consumido lo poco que", hueso)),
-        Line::from(Span::styled("quedaba de tu alma en este piso.", hueso)),
+        Line::from(Span::styled("Consumió el abismo lo poco que", hueso)),
+        Line::from(Span::styled(
+            "de vuestra ánima quedaba en aqueste sótano.",
+            hueso,
+        )),
         Line::from(""),
         Line::from(Span::styled(
-            "«...y sin embargo, seguís hablando.»",
+            "«...y con todo, seguís hablando.»",
             Style::default()
                 .fg(theme::VIOLETA)
                 .add_modifier(Modifier::ITALIC),
@@ -137,17 +140,17 @@ pub fn game_over_ui(f: &mut Frame, app: &App) {
         marcador(app),
         Line::from(""),
         Line::from(Span::styled(
-            "El fragmento se disuelve: no hay vuelta a este piso.",
+            "Deshácese el fragmento: no hay tornar a aqueste sótano.",
             Style::default().fg(theme::CENIZA_HONDA),
         )),
         Line::from(""),
-        salidas("volver a empezar"),
+        salidas("tornar a empeçar"),
     ];
 
     cierre(
         f,
         app,
-        " FIN DE LA PARTIDA ",
+        " FIN DE LA JORNADA ",
         theme::ROJO_ALTAR,
         &arte::CALAVERA,
         theme::ROJO_ALTAR,
@@ -161,21 +164,21 @@ pub fn victory_ui(f: &mut Frame, app: &App) {
     let texto = vec![
         Line::from(""),
         Line::from(Span::styled(
-            "HAS RECUPERADO TU VOZ",
+            "HABÉIS COBRADO VUESTRA VOZ",
             Style::default().fg(theme::ORO).add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
         Line::from(Span::styled(
-            "El Archidemonio del Silencio se deshace",
+            "Deshácese el Archidemonio del Silencio,",
             hueso,
         )),
         Line::from(Span::styled(
-            "y con él los 48 pisos que te callaron.",
+            "y con él los quarenta y ocho sótanos que os callaron.",
             hueso,
         )),
         Line::from(""),
         Line::from(Span::styled(
-            "«Hablá. Nadie te lo va a volver a quitar.»",
+            "«Hablad. Nadie os lo ha de quitar otra vez.»",
             Style::default()
                 .fg(theme::VIOLETA)
                 .add_modifier(Modifier::ITALIC),
@@ -183,7 +186,7 @@ pub fn victory_ui(f: &mut Frame, app: &App) {
         Line::from(""),
         marcador(app),
         Line::from(""),
-        salidas("otra bajada"),
+        salidas("otra baxada"),
     ];
 
     cierre(

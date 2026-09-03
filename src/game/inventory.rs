@@ -18,16 +18,16 @@ impl App {
 
         match item.e_type {
             EntityType::Item => {
-                if item.name == "Poción de Curación" {
+                if item.name == crate::bestiary::POCION {
                     self.player.hp =
                         (self.player.hp + balance::objetos::CURA_POCION).min(self.player.max_hp);
-                    self.add_log("> Te sientes recuperado.".into(), LogType::Item);
+                    self.add_log("> Sentíos mejorado.".into(), LogType::Item);
                     item_used = true;
                 } else {
                     // antes esto era un silencio: la tecla no hacía nada y
                     // tampoco decía por qué
                     self.add_log(
-                        format!("> {} no se usa: sólo pesa.", item.name),
+                        format!("> {} no sirve de nada: sólo pesa.", item.name),
                         LogType::Warning,
                     );
                 }
@@ -43,7 +43,7 @@ impl App {
                                 if let EntityType::Mob { ref mut hp, .. } = entity.e_type {
                                     *hp -= balance::objetos::RAYO.0;
                                     hit_msgs.push(format!(
-                                        "> RAYO: ¡Impactas a {} con {} daño de rayo!",
+                                        "> RAYO: ¡Dais en {} con {} de daño!",
                                         entity.name,
                                         balance::objetos::RAYO.0
                                     ));
@@ -53,7 +53,7 @@ impl App {
                     }
                     if hit_msgs.is_empty() {
                         self.add_log(
-                            "> El pergamino de rayo chisporrotea sin blanco cercano.".into(),
+                            "> Chisporrotea el pergamino del rayo sin blanco a que tirar.".into(),
                             LogType::Warning,
                         );
                     } else {
@@ -73,7 +73,7 @@ impl App {
                                 if let EntityType::Mob { ref mut hp, .. } = entity.e_type {
                                     *hp -= balance::objetos::BOLA_DE_FUEGO.0;
                                     hit_msgs.push(format!(
-                                        "> ¡{} sufre {} daño por fuego!",
+                                        "> ¡Padece {} {} de daño por fuego!",
                                         entity.name,
                                         balance::objetos::BOLA_DE_FUEGO.0
                                     ));
@@ -82,7 +82,7 @@ impl App {
                         }
                     }
                     self.add_log(
-                        "> BOLA DE FUEGO: ¡Explosión de fuego cercana!".into(),
+                        "> BOLA DE FUEGO: ¡Rebienta el fuego aquí cerca!".into(),
                         LogType::Combat,
                     );
                     for msg in hit_msgs {
@@ -107,8 +107,7 @@ impl App {
                         Some(p) => {
                             self.player.pos = p;
                             self.add_log(
-                                "> TELETRANSPORTE: Te desvaneces y reapareces en otro lugar."
-                                    .into(),
+                                "> TRASLADO: Desvanecéos, y aparecéis en otra parte.".into(),
                                 LogType::Info,
                             );
                             self.calculate_fov();
@@ -116,7 +115,7 @@ impl App {
                         }
                         // antes el pergamino se gastaba igual y no pasaba nada
                         None => self.add_log(
-                            "> El pergamino no encuentra dónde dejarte: sigue en tu mano.".into(),
+                            "> No halla el pergamino dónde dexaros: en vuestra mano queda.".into(),
                             LogType::Warning,
                         ),
                     }
@@ -125,7 +124,7 @@ impl App {
                     self.player.invisible_turns = balance::objetos::TURNOS_INVISIBLE;
                     self.add_log(
                         format!(
-                            "> INVISIBILIDAD: Tu cuerpo se vuelve transparente por {} turnos.",
+                            "> INVISIBILIDAD: Tórnase vuestro cuerpo transparente por {} turnos.",
                             balance::objetos::TURNOS_INVISIBLE
                         ),
                         LogType::Info,
@@ -198,7 +197,7 @@ impl App {
             }
             _ => {
                 self.add_log(
-                    format!("> No sabés qué hacer con {}.", item.name),
+                    format!("> No sabéis qué hazer con {}.", item.name),
                     LogType::Warning,
                 );
             }
@@ -255,7 +254,7 @@ impl App {
             self.inventory.push((item, 1));
         } else {
             self.add_log(
-                format!("> No te entra {}: queda a tus pies.", item.name),
+                format!("> No os cabe {}: a vuestros pies queda.", item.name),
                 LogType::Warning,
             );
             item.pos = self.player.pos;
@@ -276,7 +275,7 @@ impl App {
         if let Some(e) = viejo {
             self.guardar_o_soltar(e);
         }
-        self.add_log(format!("> Equipas {}{}.", etiqueta, nombre), LogType::Info);
+        self.add_log(format!("> Vestís {}{}.", etiqueta, nombre), LogType::Info);
     }
 
     /// Descarta un objeto del inventario en la posición actual del héroe.
@@ -292,10 +291,7 @@ impl App {
             .iter()
             .any(|e| e.pos == self.player.pos && Self::es_recogible(&e.e_type))
         {
-            self.add_log(
-                "> Ya hay un objeto en el suelo aquí.".into(),
-                LogType::Warning,
-            );
+            self.add_log("> Ya hay cosa en el suelo aquí.".into(), LogType::Warning);
             return false;
         }
 
@@ -304,10 +300,10 @@ impl App {
 
         if self.inventory[index].1 > 1 {
             self.inventory[index].1 -= 1;
-            self.add_log(format!("> Sueltas un(a) {}.", item.name), LogType::Info);
+            self.add_log(format!("> Dexáis un(a) {}.", item.name), LogType::Info);
         } else {
             self.inventory.remove(index);
-            self.add_log(format!("> Sueltas {}.", item.name), LogType::Info);
+            self.add_log(format!("> Dexáis {}.", item.name), LogType::Info);
         }
 
         self.entities.push(item);

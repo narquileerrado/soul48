@@ -20,14 +20,14 @@ const GLIFOS_MAPA: [(char, Color, &str); 12] = [
     ('@', theme::AZUL_ALMA, "vos"),
     ('#', theme::MURO, "muro"),
     ('·', theme::SUELO, "suelo"),
-    ('>', theme::ORO, "escaleras"),
+    ('>', theme::ORO, "escalera"),
     ('+', theme::CENIZA, "puerta"),
-    ('W', theme::VIOLETA, "pared parlante"),
-    ('A', theme::ROJO_ALTAR, "altar de ecos"),
+    ('W', theme::VIOLETA, "pared que habla"),
+    ('A', theme::ROJO_ALTAR, "altar de los ecos"),
     ('?', theme::VIOLETA, "pergamino"),
-    ('C', theme::COFRE, "cofre o mímico"),
-    ('^', theme::AMBAR, "trampa o yelmo"),
-    ('!', theme::HUESO, "poción"),
+    ('C', theme::COFRE, "cofre o remedador"),
+    ('^', theme::AMBAR, "trampa o almete"),
+    ('!', theme::HUESO, "redoma"),
     ('k', theme::HUESO, "llave"),
 ];
 
@@ -74,7 +74,7 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
     /* --- entidades --- */
     let bloque_entidades = Block::default()
         .borders(Borders::ALL)
-        .title(Span::styled(" ENTIDADES ", titulo(false)))
+        .title(Span::styled(" LAS ENTIDADES ", titulo(false)))
         .border_style(marco(false));
     let interior_entidades = bloque_entidades.inner(izquierda[0]);
     f.render_widget(bloque_entidades, izquierda[0]);
@@ -133,7 +133,7 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
                     .fg(theme::ROJO_ALTAR)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("Altar de Ecos", Style::default().fg(theme::HUESO)),
+            Span::styled("Altar de los Ecos", Style::default().fg(theme::HUESO)),
         ]),
     ];
     f.render_widget(Paragraph::new(presencias), secciones[4]);
@@ -175,7 +175,7 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
     f.render_widget(bloque_cronica, columna_der);
 
     // banda de retrato: el sprite a la izquierda, la ficha de la criatura al lado
-    let retrato = arte::de_criatura(e.glyph);
+    let retrato = arte::de_criatura(e.short_name);
     let alto_banda = retrato.map(|s| s.alto_en_celdas()).unwrap_or(0);
     let con_retrato = retrato.is_some() && interior_cronica.height >= 20 + alto_banda;
 
@@ -250,19 +250,19 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
 
     for (etiqueta, prop, valor, color) in [
         (
-            "VITALIDAD",
+            "VIGOR",
             e.base_hp as f64 / 45.0,
             format!("{}", e.base_hp),
             theme::ROJO_ALTAR,
         ),
         (
-            "POTENCIA",
+            "PUJANÇA",
             ((e.base_damage.0 + e.base_damage.1) as f64 / 2.0) / 12.0,
             format!("{}-{}", e.base_damage.0, e.base_damage.1),
             theme::AMBAR,
         ),
         (
-            "DEFENSA",
+            "REPARO",
             e.base_defense as f64 / 5.0,
             format!("{}", e.base_defense),
             theme::AZUL_ALMA,
@@ -283,7 +283,7 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
     }
     detalle.push(Line::from(""));
     detalle.push(Line::from(vec![
-        Span::styled(pad_der("CONDUCTA", 12), Style::default().fg(theme::CENIZA)),
+        Span::styled(pad_der("CONDICIÓN", 12), Style::default().fg(theme::CENIZA)),
         Span::styled(e.behavior, Style::default().fg(theme::HUESO)),
     ]));
 
@@ -292,7 +292,7 @@ pub fn bestiary_ui(f: &mut Frame, list_state: &mut ListState, ajustes: &Settings
         area_texto,
     );
 
-    let pares = [("↑↓", "navegar"), ("ESC", "volver")];
+    let pares = [("↑↓", "andar"), ("ESC", "tornar")];
     f.render_widget(
         Paragraph::new(barra_teclas(&pares)).alignment(Alignment::Center),
         principal[1],

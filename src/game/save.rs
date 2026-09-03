@@ -86,11 +86,14 @@ impl App {
             show_descend_prompt: false,
 
             state: GameState::Playing,
-            settings: Settings::load(crate::settings::RUTA_AJUSTES),
+            settings: Settings::default(),
             rng,
         };
 
-        app.add_log("> Partida cargada exitosamente.".into(), LogType::Info);
+        app.add_log(
+            "> Cobrada la jornada, y en buena hora.".into(),
+            LogType::Info,
+        );
         Ok(app)
     }
 

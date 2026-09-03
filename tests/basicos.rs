@@ -2,6 +2,17 @@
 //! `app.rs`. Los escenarios de varios turnos están en `mecanicas.rs`.
 
 use ratatui::style::Color;
+
+/// El nombre de la criatura que se puede calmar en vez de pelear. Sale del
+/// catálogo para que renombrarla no rompa el test en silencio.
+fn negociable() -> String {
+    soul48::bestiary::BESTIARIO
+        .iter()
+        .find(|e| e.negociable)
+        .expect("ninguna criatura es negociable")
+        .short_name
+        .to_string()
+}
 use soul48::app::*;
 
 #[test]
@@ -61,7 +72,7 @@ fn test_use_item_healing_potion() {
         pos: Point::new(0, 0),
         glyph: '!',
         color: soul48::theme::HUESO,
-        name: "Poción de Curación".to_string(),
+        name: soul48::bestiary::POCION.to_string(),
         e_type: EntityType::Item,
         status_effects: Vec::new(),
     };
@@ -80,7 +91,7 @@ fn test_drop_item() {
         pos: Point::new(0, 0),
         glyph: '!',
         color: soul48::theme::HUESO,
-        name: "Poción de Curación".to_string(),
+        name: soul48::bestiary::POCION.to_string(),
         e_type: EntityType::Item,
         status_effects: Vec::new(),
     };
@@ -152,7 +163,7 @@ fn test_spirit_negotiation() {
         pos: thief_pos,
         glyph: 'L',
         color: Color::Blue,
-        name: "Ladrón".to_string(),
+        name: negociable(),
         e_type: EntityType::Mob {
             hp: 18,
             max_hp: 18,
@@ -456,4 +467,78 @@ fn los_guardianes_cierran_su_tramo() {
             piso
         );
     }
+}
+
+/* ───────────────────────────── los retratos ───────────────────────────── */
+
+/// Toda criatura del Compendio tiene que tener su retrato.
+///
+/// `arte::de_criatura` devuelve `Option` y el Compendio cae al formato sin
+/// retrato, así que una ficha sin dibujo no rompe nada: se degrada en silencio.
+#[test]
+fn ninguna_criatura_se_queda_sin_retrato() {
+    use soul48::arte;
+    use soul48::bestiary::BESTIARIO;
+
+    let sin: Vec<&str> = BESTIARIO
+        .iter()
+        .filter(|e| arte::de_criatura(e.short_name).is_none())
+        .map(|e| e.short_name)
+        .collect();
+    assert!(sin.is_empty(), "sin retrato: {:?}", sin);
+}
+
+/// Cada criatura tiene el suyo: los cuatro Guardianes comparten la `B` en el
+/// mapa, así que buscarlos por glifo les daba el mismo dibujo a todos.
+#[test]
+fn cada_criatura_tiene_su_propio_retrato() {
+    use soul48::arte;
+    use soul48::bestiary::BESTIARIO;
+
+    let mut vistos: Vec<(*const _, &str)> = Vec::new();
+    for e in BESTIARIO.iter() {
+        let sprite = arte::de_criatura(e.short_name).expect("sin retrato");
+        let puntero = sprite as *const _;
+        if let Some((_, otro)) = vistos.iter().find(|(p, _)| *p == puntero) {
+            panic!("«{}» y «{}» comparten retrato", e.short_name, otro);
+        }
+        vistos.push((puntero, e.short_name));
+    }
+}
+
+/// El arte es texto: mientras las filas midan lo mismo, cualquier dibujo entra.
+/// Una fila corta deja un agujero transparente que nadie ve hasta abrir la ficha.
+#[test]
+fn los_retratos_son_rectangulares() {
+    use soul48::arte;
+    use soul48::bestiary::BESTIARIO;
+
+    for e in BESTIARIO.iter() {
+        let sprite = arte::de_criatura(e.short_name).expect("sin retrato");
+        let anchos: std::collections::HashSet<usize> =
+            sprite.arte.iter().map(|f| f.chars().count()).collect();
+        assert_eq!(
+            anchos.len(),
+            1,
+            "el retrato de «{}» tiene filas de distinto largo: {:?}",
+            e.short_name,
+            anchos
+        );
+    }
+}
+
+/// Una partida recién hecha no puede depender del `settings.json` de nadie.
+///
+/// `App::new` leía los ajustes del disco, con que los tests pasaban o fallaban
+/// según lo que tuviera configurado quien los corriera: un `settings.json` con
+/// GLIFOS en ascii hacía fallar el render del título sin que nada lo explicara.
+#[test]
+fn una_partida_nueva_no_lee_los_ajustes_del_disco() {
+    use soul48::settings::{Glifos, Settings};
+
+    let app = App::new(Some(1), None, None, 1, None);
+    let por_defecto = Settings::default();
+    assert_eq!(app.settings.glifos, Glifos::Unicode);
+    assert_eq!(app.settings.penumbra, por_defecto.penumbra);
+    assert_eq!(app.settings.lineas_susurro, por_defecto.lineas_susurro);
 }

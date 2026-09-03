@@ -361,6 +361,10 @@ def penumbra_centrada(ascii_mode=False):
     sub = espaciado("the talking dead")
     p.poner(8, centrar(sub), sub, CENIZA_HONDA)
 
+    # el relato del difunto, pasando rodando: acá se ve un momento del recorrido
+    cinta = RELATO[:56]
+    p.poner(9, centrar(cinta), cinta, CENIZA_HONDA)
+
     for i, opcion in enumerate(MENU_CENTRADO):
         fila = 14 + i * 2
         if i == 0:
@@ -384,6 +388,11 @@ def penumbra_centrada(ascii_mode=False):
 def centrar_ancho(ancho):
     return (COLS - ancho) // 2
 
+
+RELATO = (
+    "Despiertas en el umbral, sin voz. No eres más que un eco de quien fuiste, "
+    "un alma atada a un cuerpo que ya no respira."
+)
 
 # El orden convencional: empezar, continuar, y recién después lo demás.
 # En title.rs hoy el Compendio va segundo.
